@@ -1,14 +1,15 @@
 use std::ops::Add;
 
+#[derive(Default, Copy, Clone)]
 pub struct Position {
-    x: i32,
-    y: i32,
+    pub x: i32,
+    pub y: i32,
 }
 
-impl<'a, 'b> Add<&'b Position> for &'a Position {
+impl<'a, 'b> Add<Position> for &'a Position {
     type Output = Position;
 
-    fn add(self, other: &'b Position) -> Position {
+    fn add(self, other: Position) -> Position {
         Position {
             x: self.x + other.x,
             y: self.y + other.y
