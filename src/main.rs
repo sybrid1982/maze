@@ -125,8 +125,11 @@ fn setup(
     // x -> left/right (?)
     // y -> up/down
     // z -> back/forth
+    let camera_x: f32 = MAZE_X as f32 * MAZE_SCALE as f32 / 2.;
+    let camera_y: f32 = MAZE_Y as f32 * MAZE_SCALE as f32 / 2.;
+
     commands.spawn(Camera3dBundle {
-        transform: Transform::from_xyz(MAZE_X as f32 / 2., 200.0, MAZE_Y as f32 / 2.0).looking_at(Vec3::new(MAZE_X as f32 / 2., 0.0, MAZE_Y as f32 / 2.), Vec3::Y),
+        transform: Transform::from_xyz(camera_x, 120.0, camera_y).looking_at(Vec3::new(camera_x, 0.0, camera_y), Vec3::Y),
         ..default()
     });
 }
