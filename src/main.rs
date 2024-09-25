@@ -21,8 +21,8 @@ mod position;
 mod player;
 mod random;
 
-const MAZE_X: i32 = 8;
-const MAZE_Y: i32 = 8;
+const MAZE_X: i32 = 16;
+const MAZE_Y: i32 = 16;
 const MAZE_SCALE: f32 = 5.;
 
 const WALL_THICKNESS: f32 = MAZE_SCALE / 8.;
@@ -78,7 +78,7 @@ fn setup(
         if edge.get_edge_type() == EdgeType::Wall {
             commands.spawn( (
                 PbrBundle {
-                    mesh: meshes.add(Cuboid::new(MAZE_SCALE + WALL_THICKNESS, WALL_THICKNESS, MAZE_SCALE / 2. + WALL_THICKNESS)),
+                    mesh: meshes.add(Cuboid::new(MAZE_SCALE + WALL_THICKNESS, WALL_THICKNESS, MAZE_SCALE)),
                     material: materials.add(Color::WHITE),
                     transform: Transform::from_xyz(translation.x, translation.y + MAZE_SCALE / 2., translation.z)
                         .with_rotation(rotation),
@@ -104,19 +104,21 @@ fn setup(
     });
 
     // light
-    for i in 1..MAZE_X {
-        for j in 1..MAZE_Y {
+    for i in 0..MAZE_X {
+        for j in 0..MAZE_Y {
+                if i % 2 == 0 && j % 2 == 0 {
                 commands.spawn((
                     PointLightBundle {
                         point_light: PointLight {
                             shadows_enabled: true,
                             ..default()
                         },
-                        transform: Transform::from_xyz(MAZE_X as f32 * MAZE_SCALE as f32 / i as f32, 15.0, MAZE_Y as f32 * MAZE_SCALE as f32 / j as f32),
+                        transform: Transform::from_xyz(i as f32 * MAZE_SCALE as f32, 6.0, j as f32* MAZE_SCALE as f32),
                         ..default()
                     },
                     GridLight
                 ));
+            }
         }
     }
     // camera
@@ -124,7 +126,7 @@ fn setup(
     // y -> up/down
     // z -> back/forth
     commands.spawn(Camera3dBundle {
-        transform: Transform::from_xyz(MAZE_X as f32 / 2., 100.0, MAZE_Y as f32 / 2.0).looking_at(Vec3::new(MAZE_X as f32 / 2., 0.0, MAZE_Y as f32 / 2.), Vec3::Y),
+        transform: Transform::from_xyz(MAZE_X as f32 / 2., 200.0, MAZE_Y as f32 / 2.0).looking_at(Vec3::new(MAZE_X as f32 / 2., 0.0, MAZE_Y as f32 / 2.), Vec3::Y),
         ..default()
     });
 }
