@@ -21,8 +21,8 @@ mod position;
 mod player;
 mod random;
 
-const MAZE_X: i32 = 16;
-const MAZE_Y: i32 = 16;
+const MAZE_X: i32 = 20;
+const MAZE_Y: i32 = 20;
 const MAZE_SCALE: f32 = 5.;
 
 const WALL_THICKNESS: f32 = MAZE_SCALE / 8.;
@@ -90,9 +90,9 @@ fn setup(
 
     // spawn reference cube
     commands.spawn( PbrBundle {
-        mesh: meshes.add(Cuboid::new(MAZE_SCALE / 2., MAZE_SCALE / 2., MAZE_SCALE / 2.)),
-        material: materials.add(Color::srgb(224.,35.,50.)),
-        transform: Transform::from_xyz(MAZE_X as f32 / 2., MAZE_SCALE as f32 / 2., MAZE_Y as f32 / 2.)
+        mesh: meshes.add(Cuboid::new(MAZE_SCALE / 3., MAZE_SCALE / 3., MAZE_SCALE / 3.)),
+        material: materials.add(Color::srgb(0.7,0.1,0.2)),
+        transform: Transform::from_xyz(0., MAZE_SCALE as f32 / 2., 0.)
             .with_rotation(Quat::from_rotation_x(-std::f32::consts::FRAC_PI_2)),
         ..default()
     });
@@ -129,7 +129,7 @@ fn setup(
     let camera_y: f32 = MAZE_Y as f32 * MAZE_SCALE as f32 / 2.;
 
     commands.spawn(Camera3dBundle {
-        transform: Transform::from_xyz(camera_x, 120.0, camera_y).looking_at(Vec3::new(camera_x, 0.0, camera_y), Vec3::Y),
+        transform: Transform::from_xyz(camera_x, 140.0, camera_y).looking_at(Vec3::new(camera_x, 0.0, camera_y), Vec3::Y),
         ..default()
     });
 }
