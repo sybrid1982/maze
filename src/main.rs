@@ -16,7 +16,7 @@ use crate::maze::maze_cell_edge::EdgeType;
 use player::{Player, PlayerPlugin};
 use random::Random;
 use collider::{Collider, CollisionEvent};
-use velocity::Velocity;
+use velocity::{Velocity, VelocityPlugin};
 
 mod maze;
 mod position;
@@ -36,6 +36,7 @@ fn main() {
         ))
         .add_systems(Startup, (setup_rng, setup).chain())
         .add_plugins(PlayerPlugin)
+        .add_plugins(VelocityPlugin)
         .run();
 }
 
