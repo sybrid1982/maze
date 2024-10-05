@@ -61,7 +61,6 @@ fn input_player_update(
     keyboard_input: Res<ButtonInput<KeyCode>>,
     mut query: Query<&mut Velocity, With<Player>>,
     speed_query: Query<&Speed, With<Player>>,
-    time: Res<Time>
 ) {
     let mut velocity = query.single_mut();
     let player_speed = **speed_query.single();
@@ -81,8 +80,8 @@ fn input_player_update(
         direction_z += 1.0;
     }
 
-    let new_velocity_x = direction_x * player_speed * time.delta_seconds();
-    let new_velocity_z = direction_z * player_speed * time.delta_seconds();
+    let new_velocity_x = direction_x * player_speed;
+    let new_velocity_z = direction_z * player_speed;
 
 
     velocity.set_velocity(new_velocity_x, new_velocity_z);

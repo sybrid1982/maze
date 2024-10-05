@@ -1,13 +1,7 @@
-use bevy::{
-    color::palettes::css::*,
-    prelude::*,
-    render::{
-        render_asset::RenderAssetUsages,
-        render_resource::{Extent3d, TextureDimension, TextureFormat},
-    },
-};
+use bevy::prelude::*;
+
 use bevy_inspector_egui::quick::WorldInspectorPlugin;
-use rand::{Rng, SeedableRng};
+use rand::SeedableRng;
 use rand_chacha::ChaCha8Rng;
 
 use crate::maze::maze::Maze;
@@ -53,7 +47,7 @@ fn setup(
     mut commands: Commands,
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<StandardMaterial>>,
-    mut rng: ResMut<Random>
+    rng: ResMut<Random>
 ) {
     // create a maze
     let mut maze = Maze::new(consts::MAZE_X, consts::MAZE_Y);
@@ -132,5 +126,7 @@ fn check_for_collisions(
     collider_query: Query<(Entity, &Transform), With<Collider>>,
     mut collision_events: EventWriter<CollisionEvent>
 ) {
-    
+    let (mut player_velocity, player_transform) = player_query.single_mut();
+
+    // for (collider_entity, collider_transform)
 }

@@ -13,9 +13,9 @@ impl Velocity {
         self.y = new_y;
     }
 
-    pub fn zero_velocity(&mut self) {
-        self.set_velocity(0.0, 0.0)
-    }
+    // pub fn zero_velocity(&mut self) {
+    //     self.set_velocity(0.0, 0.0)
+    // }
 }
 
 pub struct VelocityPlugin;

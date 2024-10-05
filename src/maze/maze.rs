@@ -3,7 +3,6 @@ use rand::Rng;
 
 use crate::position::Position;
 use crate::random::Random;
-use super::maze_direction::MazeDirection;
 use super::maze_cell::MazeCell;
 use super::maze_cell_edge::MazeCellEdge;
 
@@ -40,7 +39,7 @@ impl Maze {
     }
 
     fn do_first_generation_step(&mut self, active_positions: &mut Vec<Position>, rand: &mut ResMut<Random>) {
-        let mut position = random_position(self.size_x, self.size_y, rand);
+        let position = random_position(self.size_x, self.size_y, rand);
         active_positions.push(position.clone());
 
         self.add_cell(&position)
@@ -111,7 +110,6 @@ impl Maze {
 
     fn add_passage(&mut self, prev_position: &Position, curr_position: &Position) {
         let passage = MazeCellEdge::new(prev_position.clone(), curr_position.clone());
-        let current_cell = self.get_cell(&prev_position);
 
         let cell_leaving = self.get_cell(&prev_position);
         match cell_leaving {
@@ -151,8 +149,8 @@ impl Maze {
 }
 
 fn random_position(max_x: i32, max_y: i32, rand: &mut ResMut<Random>) -> Position {
-    let mut random_x = rand.gen_range(0..max_x);
-    let mut random_y = rand.gen_range(0..max_y);
+    let random_x = rand.gen_range(0..max_x);
+    let random_y = rand.gen_range(0..max_y);
     
     Position::new_from_i32(random_x, random_y)
 }

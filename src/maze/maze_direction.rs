@@ -1,10 +1,6 @@
 use bevy::prelude::*;
-use rand::Rng;
 
-use crate::random::Random;
 use crate::position::Position;
-
-use super::maze_cell::MazeCell;
 
 #[repr(u32)]
 #[derive(Debug, Copy, Clone, PartialEq, Eq)]
@@ -16,11 +12,6 @@ pub enum MazeDirection {
 }
 
 impl MazeDirection {
-    pub fn get_random_direction(rand: &mut ResMut<Random>) -> MazeDirection {
-        let direction_index = unsafe { ::std::mem::transmute(rand.gen_range(0..4)) };
-        direction_index
-    }
-
     pub fn get_direction_from_index(index: u32) -> MazeDirection {
         let direction_index = unsafe { ::std::mem::transmute(index) };
         direction_index
