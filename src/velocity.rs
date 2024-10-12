@@ -22,13 +22,13 @@ pub struct VelocityPlugin;
 
 impl Plugin for VelocityPlugin {
     fn build(&self, app: &mut App) {
-        app.add_systems(Update, apply_velocity);
+        app.add_systems(FixedUpdate, apply_velocity);
     }
 }
 
 fn apply_velocity(mut query: Query<(&mut Transform, &Velocity)>, time: Res<Time>) {
     for (mut transform, velocity) in &mut query {
         transform.translation.x += velocity.x * time.delta_seconds();
-        transform.translation.y += velocity.y * time.delta_seconds();
+        transform.translation.z += velocity.y * time.delta_seconds();
     }
 }

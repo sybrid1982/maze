@@ -1,6 +1,7 @@
-use bevy::prelude::*;
+use bevy::{math::bounding::Aabb2d, prelude::*};
 
 use bevy_inspector_egui::quick::WorldInspectorPlugin;
+use maze::maze_direction::MazeDirection;
 use rand::SeedableRng;
 use rand_chacha::ChaCha8Rng;
 
@@ -31,6 +32,7 @@ fn main() {
         .add_systems(Startup, (setup_rng, setup).chain())
         .add_plugins(PlayerPlugin)
         .add_plugins(VelocityPlugin)
+        .add_systems(FixedUpdate, check_for_collisions)
         .run();
 }
 
@@ -121,12 +123,31 @@ fn render_floors(maze: &Maze, commands: &mut Commands<'_, '_>, meshes: &mut ResM
 }
 
 fn check_for_collisions(
-    mut commands: Commands,
     mut player_query: Query<(&mut Velocity, &Transform), With<Player>>,
-    collider_query: Query<(Entity, &Transform), With<Collider>>,
-    mut collision_events: EventWriter<CollisionEvent>
+    collider_query: Query<&Transform, (With<Collider>, Without<Player>)>,
+    // mut collision_events: EventWriter<CollisionEvent>
 ) {
     let (mut player_velocity, player_transform) = player_query.single_mut();
 
-    // for (collider_entity, collider_transform)
+    let player_collider = Collider::transform_to_aabb2d(player_transform);
+
+    for collider_transform in collider_query.iter() {
+        // need to get the dimensions of the wall and the dimensions of the player size
+        // then use those to determine if one is inside the other
+        let wall_collider = Collider::transform_to_aabb2d(collider_transform);
+        let collision = Collider::box_collision(player_collider, wall_collider);
+
+        if let Some(collision) = collision {
+            // collision_events.send(CollisionEvent);
+
+            match collision {
+                MazeDirection::EAST => player_velocity.x = f32::min(player_velocity.x, 0.),
+                MazeDirection::WEST => player_velocity.x = f32::max(player_velocity.x, 0.),
+                MazeDirection::NORTH => player_velocity.y = f32::min(player_velocity.y, 0.),
+                MazeDirection::SOUTH => player_velocity.y = f32::max(player_velocity.y, 0.)
+            }
+
+            println!("Collision happened on side {:#?}", collision)
+        }
+    }
 }
