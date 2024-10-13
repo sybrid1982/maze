@@ -1,3 +1,5 @@
+use bevy::prelude::*;
+
 use super::maze_direction::MazeDirection;
 use crate::position::Position;
 
@@ -13,6 +15,9 @@ pub struct MazeCellEdge {
     maze_direction: MazeDirection,
     edge_type: EdgeType
 }
+
+#[derive(Component, Debug, Deref, DerefMut)]
+pub struct WallPosition(pub MazeDirection);
 
 impl MazeCellEdge {
     pub fn new(position: Position, adjacent_position: Position) -> MazeCellEdge {

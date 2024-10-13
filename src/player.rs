@@ -28,7 +28,7 @@ fn setup (
 ) {
     let player = (
         PbrBundle {
-            mesh: meshes.add(Cuboid::new(consts::PLAYER_LENGTH, consts::PLAYER_HEIGHT, consts::PLAYER_WIDTH)),
+            mesh: meshes.add(Cuboid::new(consts::PLAYER_LENGTH, consts::PLAYER_WIDTH, consts::PLAYER_HEIGHT)),
             material: materials.add(Color::srgb(0.7,0.1,0.2)),
             transform: Transform::from_xyz(PLAYER_START_POSITION.x, consts::MAZE_SCALE as f32 / 2., PLAYER_START_POSITION.y)
                 .with_rotation(Quat::from_rotation_x(-std::f32::consts::FRAC_PI_2)),

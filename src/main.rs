@@ -1,7 +1,9 @@
+use core::num;
+
 use bevy::{math::bounding::Aabb2d, prelude::*};
 
 use bevy_inspector_egui::quick::WorldInspectorPlugin;
-use maze::maze_direction::MazeDirection;
+use maze::{maze_cell_edge::WallPosition, maze_direction::MazeDirection};
 use rand::SeedableRng;
 use rand_chacha::ChaCha8Rng;
 
@@ -12,6 +14,7 @@ use player::{Player, PlayerPlugin};
 use random::Random;
 use collider::{Collider, CollisionEvent};
 use velocity::{Velocity, VelocityPlugin};
+use position::MazePosition;
 
 mod maze;
 mod position;
@@ -20,8 +23,6 @@ mod random;
 mod consts;
 mod collider;
 mod velocity;
-
-const WALL_THICKNESS: f32 = consts::MAZE_SCALE / 8.;
 
 fn main() {
     App::new()
@@ -88,58 +89,85 @@ fn add_top_view_camera(mut commands: Commands<'_, '_>) {
 fn render_walls(maze: Maze, commands: &mut Commands<'_, '_>, meshes: &mut ResMut<'_, Assets<Mesh>>, materials: &mut ResMut<'_, Assets<StandardMaterial>>) {
     let edges = maze.get_edges();
 
+    let walls = commands.spawn((
+        SpatialBundle {
+            transform: Transform::from_xyz(0.,0.,0.),
+            ..default()
+        },
+        Name::new("walls"))
+    ).id();
+
     for edge in edges {
         let translation = edge.get_position().to_vec3_by_scale(consts::MAZE_SCALE) + edge.get_maze_direction().to_position_modifier().to_vec3_by_scale(consts::MAZE_SCALE) * 0.5;
         let rotation = edge.get_maze_direction().get_direction_quat();
         if edge.get_edge_type() == EdgeType::Wall {
-            commands.spawn( (
+            let wall = commands.spawn( (
                 PbrBundle {
-                    mesh: meshes.add(Cuboid::new(consts::MAZE_SCALE + WALL_THICKNESS, WALL_THICKNESS, consts::MAZE_SCALE)),
+                    mesh: meshes.add(Cuboid::new(consts::MAZE_SCALE + consts::WALL_THICKNESS, consts::WALL_THICKNESS, consts::MAZE_SCALE)),
                     material: materials.add(Color::WHITE),
                     transform: Transform::from_xyz(translation.x, translation.y + consts::MAZE_SCALE / 2., translation.z)
                         .with_rotation(rotation),
                     ..default()
                 },
-                Collider
-            ));
+                Collider,
+                MazePosition(edge.get_position().get_as_vec2()),
+                WallPosition(edge.get_maze_direction()),
+                Name::new(format!("Wall {:#?} at ({:#?}, {:#?})", edge.get_maze_direction(), edge.get_position().x, edge.get_position().y))
+            )).id();
+
+            commands.entity(walls).push_children(&[wall]);
         }
     }
 }
 
 fn render_floors(maze: &Maze, commands: &mut Commands<'_, '_>, meshes: &mut ResMut<'_, Assets<Mesh>>, materials: &mut ResMut<'_, Assets<StandardMaterial>>) {
     let cells = maze.get_cells();
+
+    let floors = commands.spawn((
+        SpatialBundle {
+            transform: Transform::from_xyz(0.,0.,0.),
+            ..default()
+        },
+        Name::new("floors"))
+    ).id();
     
     for cell in cells {
         let translation = cell.get_position().to_vec3_by_scale(consts::MAZE_SCALE);
         if cell.is_render() {
-            commands.spawn( PbrBundle {
-                mesh: meshes.add(Rectangle::new(consts::MAZE_SCALE, consts::MAZE_SCALE)),
-                material: materials.add(Color::WHITE),
-                transform: Transform { translation, rotation: Quat::from_rotation_x(-std::f32::consts::FRAC_PI_2), ..default() },
-                ..default()
-            });
+            let floor = commands.spawn( (
+                PbrBundle {
+                    mesh: meshes.add(Rectangle::new(consts::MAZE_SCALE, consts::MAZE_SCALE)),
+                    material: materials.add(Color::WHITE),
+                    transform: Transform { translation, rotation: Quat::from_rotation_x(-std::f32::consts::FRAC_PI_2), ..default() },
+                    ..default()
+                },
+                MazePosition(cell.get_position().get_as_vec2()),
+                Name::new(format!("Floor: {:#?}", cell.get_position()))
+            )).id();
+            commands.entity(floors).push_children(&[floor]);
         }
     }
 }
 
 fn check_for_collisions(
     mut player_query: Query<(&mut Velocity, &Transform), With<Player>>,
-    collider_query: Query<&Transform, (With<Collider>, Without<Player>)>,
+    collider_query: Query<(&Transform, &WallPosition), (With<Collider>, Without<Player>)>,
     // mut collision_events: EventWriter<CollisionEvent>
 ) {
     let (mut player_velocity, player_transform) = player_query.single_mut();
 
     let player_collider = Collider::transform_to_aabb2d(player_transform);
 
-    for collider_transform in collider_query.iter() {
+    let mut number_of_collisions = 0;
+
+    for (collider_transform, wall_position) in collider_query.iter() {
         // need to get the dimensions of the wall and the dimensions of the player size
         // then use those to determine if one is inside the other
-        let wall_collider = Collider::transform_to_aabb2d(collider_transform);
+        let wall_collider = Collider::get_wall_aabb2d(&collider_transform, &wall_position);
         let collision = Collider::box_collision(player_collider, wall_collider);
 
         if let Some(collision) = collision {
             // collision_events.send(CollisionEvent);
-
             match collision {
                 MazeDirection::EAST => player_velocity.x = f32::min(player_velocity.x, 0.),
                 MazeDirection::WEST => player_velocity.x = f32::max(player_velocity.x, 0.),
@@ -147,7 +175,7 @@ fn check_for_collisions(
                 MazeDirection::SOUTH => player_velocity.y = f32::max(player_velocity.y, 0.)
             }
 
-            println!("Collision happened on side {:#?}", collision)
+            number_of_collisions = number_of_collisions + 1;
         }
     }
 }

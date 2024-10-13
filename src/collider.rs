@@ -4,6 +4,7 @@ use bevy::{
 };
 
 use super::maze::maze_direction::MazeDirection;
+use super::consts;
 
 #[derive(Component)]
 pub struct Collider;
@@ -43,6 +44,20 @@ impl Collider {
         Aabb2d::new(
         Vec2::new(transform.translation.x, transform.translation.z),
         Vec2::new(transform.scale.x / 2., transform.scale.z / 2.),
+        )
+    }
+
+    pub fn get_wall_aabb2d(transform: &Transform, wall_facing: &MazeDirection) -> Aabb2d {
+        let wall_half_size = match wall_facing {
+            MazeDirection::EAST => Vec2::new(consts::WALL_THICKNESS / 2., consts::MAZE_SCALE / 2.),
+            MazeDirection::WEST => Vec2::new(consts::WALL_THICKNESS / 2., consts::MAZE_SCALE / 2.),
+            MazeDirection::NORTH => Vec2::new(consts::MAZE_SCALE / 2., consts::WALL_THICKNESS / 2. ),
+            MazeDirection::SOUTH => Vec2::new(consts::MAZE_SCALE / 2., consts::WALL_THICKNESS / 2.),
+        };
+
+        Aabb2d::new(
+            Vec2::new(transform.translation.x, transform.translation.z),
+            wall_half_size
         )
     }
 }
