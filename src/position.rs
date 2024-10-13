@@ -1,11 +1,14 @@
 use std::ops::{Add, Mul, Sub};
-use bevy::prelude::Vec3;
+use bevy::prelude::{Component, Deref, DerefMut, Vec2, Vec3};
 
 #[derive(Default, Debug, Copy, Clone, PartialEq)]
 pub struct Position {
     pub x: f32,
     pub y: f32,
 }
+
+#[derive(Component, Debug, Deref, DerefMut)]
+pub struct MazePosition(pub Vec2);
 
 impl<'a> Add<Position> for &'a Position {
     type Output = Position;
@@ -56,5 +59,9 @@ impl Position {
     pub fn to_vec3_by_scale(&self, scale: f32) -> Vec3 {
         let (x, y) = self.get_as_tuple();
         Vec3::new(x * scale, 0. * scale, y * scale)
+    }
+
+    pub fn get_as_vec2(&self) -> Vec2 {
+        Vec2::new(self.x, self.y)
     }
 }
