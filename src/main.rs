@@ -1,6 +1,4 @@
-use core::num;
-
-use bevy::{math::bounding::Aabb2d, prelude::*};
+use bevy::prelude::*;
 
 use bevy_inspector_egui::quick::WorldInspectorPlugin;
 use maze::{maze_cell_edge::WallPosition, maze_direction::MazeDirection};
@@ -12,7 +10,7 @@ use crate::maze::maze_cell_edge::EdgeType;
 
 use player::{Player, PlayerPlugin};
 use random::Random;
-use collider::{Collider, CollisionEvent};
+use collider::Collider;
 use velocity::{Velocity, VelocityPlugin};
 use position::MazePosition;
 
