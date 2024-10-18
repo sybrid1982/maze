@@ -48,15 +48,15 @@ fn setup(
     mut commands: Commands,
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<StandardMaterial>>,
-    rng: ResMut<Random>
+    mut rng: ResMut<Random>
 ) {
     // create a maze
     let mut maze = Maze::new(consts::MAZE_X, consts::MAZE_Y);
-    maze.generate(rng);
+    maze.generate(&mut rng);
 
     render_floors(&maze, &mut commands, &mut meshes, &mut materials);
 
-    render_walls(maze, &mut commands, &mut meshes, &mut materials);
+    render_walls(maze, &mut commands, &mut meshes, &mut materials, &mut rng);
 
     // ambient light
     commands.insert_resource(AmbientLight {
@@ -84,7 +84,12 @@ fn add_top_view_camera(mut commands: Commands<'_, '_>) {
     });
 }
 
-fn render_walls(maze: Maze, commands: &mut Commands<'_, '_>, meshes: &mut ResMut<'_, Assets<Mesh>>, materials: &mut ResMut<'_, Assets<StandardMaterial>>) {
+fn render_walls(
+    maze: Maze,
+    commands: &mut Commands<'_, '_>,
+    meshes: &mut ResMut<'_, Assets<Mesh>>,
+    materials: &mut ResMut<'_, Assets<StandardMaterial>>,
+    rng: &mut ResMut<Random>) {
     let edges = maze.get_edges();
 
     let walls = commands.spawn((
@@ -96,7 +101,7 @@ fn render_walls(maze: Maze, commands: &mut Commands<'_, '_>, meshes: &mut ResMut
     ).id();
 
     for edge in edges {
-        edge.render_edge(commands, meshes, materials, walls);
+        edge.render_edge(commands, meshes, materials, walls,  rng);
     }
 }
 
