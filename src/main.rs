@@ -96,27 +96,11 @@ fn render_walls(maze: Maze, commands: &mut Commands<'_, '_>, meshes: &mut ResMut
     ).id();
 
     for edge in edges {
-        let translation = edge.get_position().to_vec3_by_scale(consts::MAZE_SCALE) + edge.get_maze_direction().to_position_modifier().to_vec3_by_scale(consts::MAZE_SCALE) * 0.5;
-        let rotation = edge.get_maze_direction().get_direction_quat();
-        if edge.get_edge_type() == EdgeType::Wall {
-            let wall = commands.spawn( (
-                PbrBundle {
-                    mesh: meshes.add(Cuboid::new(consts::MAZE_SCALE + consts::WALL_THICKNESS, consts::WALL_THICKNESS, consts::MAZE_SCALE)),
-                    material: materials.add(Color::WHITE),
-                    transform: Transform::from_xyz(translation.x, translation.y + consts::MAZE_SCALE / 2., translation.z)
-                        .with_rotation(rotation),
-                    ..default()
-                },
-                Collider,
-                MazePosition(edge.get_position().get_as_vec2()),
-                WallPosition(edge.get_maze_direction()),
-                Name::new(format!("Wall {:#?} at ({:#?}, {:#?})", edge.get_maze_direction(), edge.get_position().x, edge.get_position().y))
-            )).id();
-
-            commands.entity(walls).push_children(&[wall]);
-        }
+        edge.render_edge(commands, meshes, materials, walls);
     }
 }
+
+
 
 fn render_floors(maze: &Maze, commands: &mut Commands<'_, '_>, meshes: &mut ResMut<'_, Assets<Mesh>>, materials: &mut ResMut<'_, Assets<StandardMaterial>>) {
     let cells = maze.get_cells();
