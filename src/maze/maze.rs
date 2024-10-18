@@ -24,17 +24,18 @@ impl Maze {
         }
     }
 
-    pub fn generate(&mut self, mut rand: ResMut<Random>) {
+    pub fn generate(&mut self, rand: &mut ResMut<Random>) {
         // probably need to check if cells exists, and if it does, wipe it
         
         // will this do it?
         self.cells.clear();
+        self.edges.clear();
 
         let mut active_positions: Vec<Position> = vec![];
-        self.do_first_generation_step(&mut active_positions, &mut rand);
+        self.do_first_generation_step(&mut active_positions, rand);
 
         while active_positions.len() > 0 {
-            self.do_next_generation_step(&mut active_positions, &mut rand);
+            self.do_next_generation_step(&mut active_positions, rand);
         }
     }
 
