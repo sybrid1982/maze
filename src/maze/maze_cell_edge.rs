@@ -30,11 +30,11 @@ impl MazeCellEdge {
         self.edge_type = EdgeType::Wall;
     }
 
-    pub fn get_edge_type(&self) -> EdgeType {
+    fn get_edge_type(&self) -> EdgeType {
         self.edge_type
     }
 
-    pub fn get_position(&self) -> Position {
+    fn get_position(&self) -> Position {
         self.position.clone()
     }
 
