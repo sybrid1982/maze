@@ -60,8 +60,8 @@ fn setup(
 
     // ambient light
     commands.insert_resource(AmbientLight {
-        color: Color::srgba(0.896, 0.715, 0.704, 1.000),
-        brightness: 60.,
+        color: consts::GLOBAL_LIGHT_TINT,
+        brightness: consts::GLOBAL_LIGHT_INTENSITY,
     });
 
     add_top_view_camera(commands);

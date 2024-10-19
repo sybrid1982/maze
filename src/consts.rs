@@ -1,7 +1,12 @@
+use bevy::color::Color;
+
 pub const MAZE_X: i32 = 20;
 pub const MAZE_Y: i32 = 20;
 pub const MAZE_SCALE: f32 = 5.;
 pub const WALL_THICKNESS: f32 = MAZE_SCALE / 8.;
+
+pub const GLOBAL_LIGHT_INTENSITY: f32 = 600.0;
+pub const GLOBAL_LIGHT_TINT: Color = Color::WHITE;
 
 pub const PLAYER_SPEED: f32 = 8.;
 pub const PLAYER_HEIGHT: f32 = 2.5;
