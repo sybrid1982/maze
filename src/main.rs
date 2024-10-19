@@ -64,6 +64,20 @@ fn setup(
         brightness: consts::GLOBAL_LIGHT_INTENSITY,
     });
 
+    let light_position: Vec2 = Vec2::splat(consts::MAZE_X as f32 * consts::MAZE_SCALE as f32);
+
+    // directional light
+    commands.spawn(DirectionalLightBundle {
+        transform: Transform::from_xyz(light_position.x, 120.0, light_position.y).looking_at(Vec3::new(0., 0., 0.), Vec3::Y),
+        directional_light: DirectionalLight {
+            color: consts::DIRECTIONAL_LIGHT_TINT,
+            illuminance: consts::DIRECTIONAL_LIGHT_INTENSITY,
+            shadows_enabled: true,
+            ..default()
+        },
+        ..default()
+    });
+
     add_top_view_camera(commands);
 }
 
