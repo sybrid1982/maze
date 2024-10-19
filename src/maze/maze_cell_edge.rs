@@ -27,8 +27,9 @@ impl MazeCellEdge {
         MazeCellEdge { position, maze_direction, edge_type: EdgeType::default(), painting: None }
     }
 
-    pub fn set_wall(&mut self) {
+    pub fn set_wall(&mut self, painting: Option<Painting>) {
         self.edge_type = EdgeType::Wall;
+        self.set_painting(painting);
     }
 
     fn get_edge_type(&self) -> EdgeType {
@@ -43,13 +44,16 @@ impl MazeCellEdge {
         self.maze_direction
     }
 
+    fn set_painting(&mut self, painting: Option<Painting>) {
+        self.painting = painting;
+    }
+
     pub fn render_edge(
         &self, 
         commands: &mut Commands<'_, '_>, 
         meshes: &mut ResMut<'_, Assets<Mesh>>,
         materials: &mut ResMut<'_, Assets<StandardMaterial>>, 
         walls: Entity, 
-        rand: &mut ResMut<Random>
     ) {    
         if self.get_edge_type() == EdgeType::Wall {
             let translation: Vec3 = self.get_position().to_vec3_by_scale(consts::MAZE_SCALE) + self.get_maze_direction().to_position_modifier().to_vec3_by_scale(consts::MAZE_SCALE) * 0.5;
@@ -69,13 +73,12 @@ impl MazeCellEdge {
                 Name::new(format!("Wall {:#?} at ({:#?}, {:#?})", self.get_maze_direction(), self.get_position().x, self.get_position().y))
             )).id();
 
-            let maybe_painting = Painting::generate_random_painting(rand);
-            if maybe_painting.is_some() {
-                let painting = maybe_painting.unwrap().get_painting(meshes, materials);
+            if self.painting.is_some() {
+                let painting = self.painting.as_ref().unwrap().get_painting(meshes, materials);
                 let painting_entity = commands.spawn(painting).id();
                 commands.entity(wall).push_children(&[painting_entity]);
             }
-    
+
             commands.entity(walls).push_children(&[wall]);
         }
     }

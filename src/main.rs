@@ -6,7 +6,6 @@ use rand::SeedableRng;
 use rand_chacha::ChaCha8Rng;
 
 use crate::maze::maze::Maze;
-use crate::maze::maze_cell_edge::EdgeType;
 
 use player::{Player, PlayerPlugin};
 use random::Random;
@@ -28,7 +27,7 @@ fn main() {
             DefaultPlugins,
             WorldInspectorPlugin::new(),
         ))
-        .add_systems(Startup, (setup_rng, setup).chain())
+        .add_systems(Startup, (setup_rng, generate_maze, render_maze).chain())
         .add_plugins(PlayerPlugin)
         .add_plugins(VelocityPlugin)
         .add_systems(FixedUpdate, check_for_collisions)
@@ -39,25 +38,30 @@ fn setup_rng(
     mut commands: Commands
 ) {
     let rng = ChaCha8Rng::from_entropy();
-    // insert the random resource so we can use it everywhere else
     commands.insert_resource(Random(rng));
 }
 
 /// set up a simple 3D scene
-fn setup(
+fn render_maze(
     mut commands: Commands,
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<StandardMaterial>>,
-    mut rng: ResMut<Random>
+    maze: Res<Maze>
 ) {
+    render_floors(&maze, &mut commands, &mut meshes, &mut materials);
+    render_walls(&maze, &mut commands, &mut meshes, &mut materials);
+    add_lights(&mut commands);
+    add_top_view_camera(commands);
+}
+
+fn generate_maze(mut commands: Commands, mut rng: ResMut<Random>) {
     // create a maze
     let mut maze = Maze::new(consts::MAZE_X, consts::MAZE_Y);
     maze.generate(&mut rng);
+    commands.insert_resource(maze);
+}
 
-    render_floors(&maze, &mut commands, &mut meshes, &mut materials);
-
-    render_walls(maze, &mut commands, &mut meshes, &mut materials, &mut rng);
-
+fn add_lights(commands: &mut Commands<'_, '_>) {
     // ambient light
     commands.insert_resource(AmbientLight {
         color: consts::GLOBAL_LIGHT_TINT,
@@ -77,8 +81,6 @@ fn setup(
         },
         ..default()
     });
-
-    add_top_view_camera(commands);
 }
 
 fn add_top_view_camera(mut commands: Commands<'_, '_>) {
@@ -99,11 +101,10 @@ fn add_top_view_camera(mut commands: Commands<'_, '_>) {
 }
 
 fn render_walls(
-    maze: Maze,
+    maze: &Maze,
     commands: &mut Commands<'_, '_>,
     meshes: &mut ResMut<'_, Assets<Mesh>>,
-    materials: &mut ResMut<'_, Assets<StandardMaterial>>,
-    rng: &mut ResMut<Random>) {
+    materials: &mut ResMut<'_, Assets<StandardMaterial>>) {
     let edges = maze.get_edges();
 
     let walls = commands.spawn((
@@ -115,7 +116,7 @@ fn render_walls(
     ).id();
 
     for edge in edges {
-        edge.render_edge(commands, meshes, materials, walls,  rng);
+        edge.render_edge(commands, meshes, materials, walls);
     }
 }
 

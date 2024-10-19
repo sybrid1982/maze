@@ -13,7 +13,7 @@ pub enum PaintingType {
 
 impl PaintingType {
     pub fn get_dimensions(&self) -> Vec2 {
-        match (self) {
+        match self {
             PaintingType::Square => Vec2 {x: 2., y: 2.},
             PaintingType::LongHorizontal => Vec2 {x: 3., y: 1.},
             PaintingType::Portrait =>  Vec2 {x: 2., y: 3.},
@@ -42,7 +42,7 @@ pub enum PaintingColor {
 
 impl PaintingColor {
     pub fn get_color(&self) -> Color {
-        match (self) {
+        match self {
             PaintingColor::Red => Color::srgb(1.,0.,0.),
             PaintingColor::Yellow => Color::srgb(1.,1.,0.),
             PaintingColor::Blue => Color::srgb(0.,0.,1.),
@@ -60,6 +60,7 @@ impl PaintingColor {
     }
 }
 
+#[derive(Clone)]
 pub struct Painting {
     painting_type: PaintingType,
     painting_color: PaintingColor,
@@ -68,7 +69,7 @@ pub struct Painting {
 
 impl Painting {
     pub fn get_painting(&self, meshes: &mut ResMut<'_, Assets<Mesh>>, materials: &mut ResMut<'_, Assets<StandardMaterial>>) -> PbrBundle {
-        let wall_offset = if (self.is_north_west) { consts::PAINTING_THICKNESS } else { -1.0 * consts::PAINTING_THICKNESS};
+        let wall_offset = if self.is_north_west { consts::PAINTING_THICKNESS } else { -1.0 * consts::PAINTING_THICKNESS};
         PbrBundle {
             mesh: meshes.add(Cuboid::new(self.painting_type.get_dimensions().x, consts::WALL_THICKNESS, self.painting_type.get_dimensions().y)),
             material: materials.add(self.painting_color.get_color()),

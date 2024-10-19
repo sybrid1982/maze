@@ -1,6 +1,6 @@
 use bevy::{
     prelude::*,
-    math::bounding::{Bounded2d, Aabb2d}
+    math::bounding::Aabb2d
 };
 
 use super::maze::maze_direction::MazeDirection;
