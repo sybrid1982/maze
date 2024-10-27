@@ -1,6 +1,6 @@
 use bevy::{
     prelude::*,
-    math::bounding::{Bounded2d, Aabb2d}
+    math::bounding::Aabb2d
 };
 
 use super::maze::maze_direction::MazeDirection;
@@ -56,7 +56,7 @@ impl Collider {
         };
 
         Aabb2d::new(
-            Vec2::new(transform.translation.x, transform.translation.z),
+            Vec2::new(transform.translation.x, transform.translation.z) - Vec2::new(wall_facing.get_wall_fudge().x, wall_facing.get_wall_fudge().z),
             wall_half_size
         )
     }

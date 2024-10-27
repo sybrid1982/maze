@@ -1,12 +1,15 @@
 use bevy::prelude::*;
 use rand::Rng;
 
+use crate::consts;
 use crate::position::Position;
 use crate::random::Random;
 use super::maze_cell::MazeCell;
 use super::maze_cell_edge::MazeCellEdge;
+use super::maze_door::MazeDoor;
+use super::paintings::Painting;
 
-#[derive(Default)]
+#[derive(Default, Resource)]
 pub struct Maze {
     pub size_x: i32,
     pub size_y: i32,
@@ -59,20 +62,22 @@ impl Maze {
                 if self.contains_position(&new_position) {
                     match self.get_cell(&new_position) {
                         Some(..) => {
-                            // we need a wall, and we aren't done with this position
-                            active_positions.push(position);
-                            self.add_wall(&position, &new_position)
+                            self.add_wall_to_position(active_positions, position, new_position, rand);
                         },
                         None => {
                             active_positions.push(position);
                             active_positions.push(new_position);
                             self.add_cell(&new_position);
-                            self.add_passage(&position, &new_position)
+                            if rand.gen_range(0. .. 1.) < consts::DOOR_PROBABILITY {
+                                println!("Generated a door");
+                                self.add_door(&position, &new_position)
+                            } else {
+                                self.add_passage(&position, &new_position)
+                            }
                         }
                     }
                 } else {
-                    active_positions.push(position);
-                    self.add_wall(&position, &new_position)
+                    self.add_wall_to_position(active_positions, position, new_position, rand);
                 }
             },
             None => {
@@ -81,15 +86,21 @@ impl Maze {
         }
     }
 
+    fn add_wall_to_position(&mut self, active_positions: &mut Vec<Position>, position: Position, new_position: Position, rand: &mut ResMut<Random>) {
+        let maybe_painting = Painting::generate_random_painting(rand);
+        active_positions.push(position);
+        self.add_wall(&position, &new_position, maybe_painting)
+    }
+    
     pub fn add_cell(&mut self, position: &Position) {
         let mut cell = MazeCell::new(position.x, position.y);
         cell.toggle_render();
         self.cells.push(cell);
     }
 
-    pub fn add_wall(&mut self, prev_position: &Position, curr_position: &Position, ) {
+    pub fn add_wall(&mut self, prev_position: &Position, curr_position: &Position, maybe_painting: Option<Painting>) {
         let mut wall = MazeCellEdge::new(prev_position.clone(), curr_position.clone());
-        wall.set_wall();
+        wall.set_wall(maybe_painting);
         let cell_leaving = self.get_cell(&prev_position);
         match cell_leaving {
             Some(cell) => {
@@ -130,6 +141,33 @@ impl Maze {
                 println!("No cell at position {}", format!("{:#?}", prev_position));
             }
         }
+    }
+
+    fn add_door(&mut self, prev_position: &Position, curr_position: &Position) {
+        let mut doorway = MazeCellEdge::new(prev_position.clone(), curr_position.clone());
+        doorway.set_door();
+
+        let cell_leaving = self.get_cell(&prev_position);
+        match cell_leaving {
+            Some(cell) => {
+                cell.add_edge(&doorway.get_maze_direction());
+            },
+            None => {
+                println!("No cell at position {}", format!("{:#?}", prev_position));
+            }
+        }
+        let cell_entering = self.get_cell(&curr_position);
+        match cell_entering {
+            Some(cell) => {
+                cell.add_edge(&doorway.get_maze_direction().get_opposite_direction());
+            },
+            None => {
+                println!("No cell at position {}", format!("{:#?}", prev_position));
+            }
+        }
+
+        self.edges.push(doorway);
+
     }
 
     pub fn get_cells(&self) -> &Vec<MazeCell> {

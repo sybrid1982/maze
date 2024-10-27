@@ -1,6 +1,6 @@
 use bevy::prelude::*;
 
-use super::{maze_direction::MazeDirection, paintings::Painting};
+use super::{maze_assets::MazeAssets, maze_direction::MazeDirection, maze_door::MazeDoor, paintings::Painting};
 use crate::{collider::Collider, consts, position::{MazePosition, Position}, random::Random};
 
 
@@ -8,7 +8,8 @@ use crate::{collider::Collider, consts, position::{MazePosition, Position}, rand
 pub enum EdgeType {
     #[default]
     Passage,
-    Wall
+    Wall,
+    Doorway
 }
 
 pub struct MazeCellEdge {
@@ -27,8 +28,13 @@ impl MazeCellEdge {
         MazeCellEdge { position, maze_direction, edge_type: EdgeType::default(), painting: None }
     }
 
-    pub fn set_wall(&mut self) {
+    pub fn set_wall(&mut self, painting: Option<Painting>) {
         self.edge_type = EdgeType::Wall;
+        self.set_painting(painting);
+    }
+
+    pub fn set_door(&mut self) {
+        self.edge_type = EdgeType::Doorway;
     }
 
     fn get_edge_type(&self) -> EdgeType {
@@ -43,13 +49,16 @@ impl MazeCellEdge {
         self.maze_direction
     }
 
-    pub fn render_edge(
+    fn set_painting(&mut self, painting: Option<Painting>) {
+        self.painting = painting;
+    }
+
+    pub fn render_edge_no_resources(
         &self, 
         commands: &mut Commands<'_, '_>, 
         meshes: &mut ResMut<'_, Assets<Mesh>>,
         materials: &mut ResMut<'_, Assets<StandardMaterial>>, 
         walls: Entity, 
-        rand: &mut ResMut<Random>
     ) {    
         if self.get_edge_type() == EdgeType::Wall {
             let translation: Vec3 = self.get_position().to_vec3_by_scale(consts::MAZE_SCALE) + self.get_maze_direction().to_position_modifier().to_vec3_by_scale(consts::MAZE_SCALE) * 0.5;
@@ -69,14 +78,68 @@ impl MazeCellEdge {
                 Name::new(format!("Wall {:#?} at ({:#?}, {:#?})", self.get_maze_direction(), self.get_position().x, self.get_position().y))
             )).id();
 
-            let maybe_painting = Painting::generate_random_painting(rand);
-            if maybe_painting.is_some() {
-                let painting = maybe_painting.unwrap().get_painting(meshes, materials);
+            if self.painting.is_some() {
+                let painting = self.painting.as_ref().unwrap().get_painting(meshes, materials);
                 let painting_entity = commands.spawn(painting).id();
                 commands.entity(wall).push_children(&[painting_entity]);
             }
-    
+
             commands.entity(walls).push_children(&[wall]);
+        }
+    }
+
+    pub fn render_edge_resources(
+        &self,
+        commands: &mut Commands<'_, '_>,
+        wall_assets: &Res<MazeAssets>,
+        walls: Entity, 
+    ) {
+        if self.get_edge_type() == EdgeType::Wall {
+            let translation: Vec3 = self.get_position().to_vec3_by_scale(consts::MAZE_SCALE) + self.get_maze_direction().to_position_modifier().to_vec3_by_scale(consts::MAZE_SCALE) * 0.5 + self.get_maze_direction().get_wall_fudge();
+            let rotation = self.get_maze_direction().get_direction_quat();
+            let transform = Transform::from_xyz(translation.x, translation.y, translation.z)
+                .with_rotation(rotation)
+                .with_scale(Vec3::new(2.0, 2.0, 2.0));
+    
+            let wall = commands.spawn( (
+                SceneBundle {
+                    scene: wall_assets.basic_wall.clone(),
+                    transform,
+                    ..default()
+                },
+                Collider,
+                MazePosition(self.get_position().get_as_vec2()),
+                WallPosition(self.get_maze_direction()),
+                Name::new(format!("Wall {:#?} at ({:#?}, {:#?})", self.get_maze_direction(), self.get_position().x, self.get_position().y))
+            )).id();
+
+            commands.entity(walls).push_children(&[wall]);
+        } else if self.get_edge_type() == EdgeType::Doorway {
+            let translation: Vec3 = self.get_position().to_vec3_by_scale(consts::MAZE_SCALE) + self.get_maze_direction().to_position_modifier().to_vec3_by_scale(consts::MAZE_SCALE) * 0.5 + self.get_maze_direction().get_door_fudge();
+            let rotation = self.get_maze_direction().get_direction_quat();
+            let transform = Transform::from_xyz(translation.x, translation.y, translation.z)
+                .with_rotation(rotation)
+                .with_scale(Vec3::new(2.0, 2.0, 2.0));
+
+            let door = MazeDoor::new(
+                commands,
+                &wall_assets,
+                self.get_position(),
+                self.get_maze_direction()
+            );
+
+            let doorway = commands.spawn((
+                SceneBundle {
+                    scene: wall_assets.doorway.clone(),
+                    transform,
+                    ..default()
+                },
+                Collider,
+                MazePosition(self.get_position().get_as_vec2()),
+                Name::new(format!("Door {:#?} at ({:#?}, {:#?})", self.get_maze_direction(), self.get_position().x, self.get_position().y))
+            )).id();
+
+            commands.entity(doorway).push_children(&[door.get_door_child()]);
         }
     }
 }
