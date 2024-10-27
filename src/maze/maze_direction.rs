@@ -48,10 +48,29 @@ impl MazeDirection {
 
     pub fn get_direction_quat(&self) -> Quat {
         match &self {
-            MazeDirection::EAST => Quat::from_euler(EulerRot::XYZ, std::f32::consts::FRAC_PI_2, 0., std::f32::consts::FRAC_PI_2 ),
-            MazeDirection::NORTH => Quat::from_rotation_x(-std::f32::consts::FRAC_PI_2),
-            MazeDirection::WEST => Quat::from_euler(EulerRot::XYZ, std::f32::consts::FRAC_PI_2, 0., std::f32::consts::FRAC_PI_2),
-            MazeDirection::SOUTH => Quat::from_rotation_x(-std::f32::consts::FRAC_PI_2),
+            MazeDirection::EAST => Quat::from_euler(EulerRot::XZY, 0., 0., std::f32::consts::FRAC_PI_2 ),
+            MazeDirection::NORTH => Quat::from_euler(EulerRot::XZY, 0., 0., 0. ),
+            MazeDirection::WEST => Quat::from_euler(EulerRot::XZY, 0., 0., std::f32::consts::FRAC_PI_2),
+            MazeDirection::SOUTH => Quat::from_euler(EulerRot::XZY, 0., 0., 0. ),
         }
     }
+
+    pub fn get_wall_fudge(&self) -> Vec3 {
+        match &self {
+            MazeDirection::EAST => Vec3::new(0., 0.0, 2.5),
+            MazeDirection::NORTH => Vec3::new(-2.5, 0.0, 0.),
+            MazeDirection::WEST => Vec3::new(0., 0.0, 2.5),
+            MazeDirection::SOUTH => Vec3::new(-2.5, 0.0, 0.),
+        }
+    }
+
+    pub fn get_door_fudge(&self) -> Vec3 {
+        match &self {
+            MazeDirection::EAST => Vec3::new(0., 0.0, 2.5),
+            MazeDirection::NORTH => Vec3::new(-2.5, 0.0, 0.),
+            MazeDirection::WEST => Vec3::new(0., 0.0, 2.5),
+            MazeDirection::SOUTH => Vec3::new(-2.5, 0.0, 0.),
+        }
+    }
+
 }
