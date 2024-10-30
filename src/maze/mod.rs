@@ -5,3 +5,4 @@ pub mod maze_cell_edge;
 pub mod paintings;
 pub mod maze_door;
 pub mod maze_assets;
+pub mod maze_room;

@@ -1,7 +1,7 @@
 use bevy::prelude::*;
 
 use super::{maze_assets::MazeAssets, maze_direction::MazeDirection};
-use crate::{collider::Collider, position::Position};
+use crate::{collider::Collider};
 /**
  * Because a door is more complicated, I want to make sure I have the logic for it all in one place.
  * A door consists of two entities, the frame which is the parent, and the child that is the door itself.
@@ -13,14 +13,9 @@ use crate::{collider::Collider, position::Position};
  * open_door(swing_forward: boolean) -> opens the door.  If swing_forward is true, then we rotate the y axis 90 positive, if false then 90 negative
  */
 
-const MAZE_DOOR_VERTICAL_FRAME: f32 = 0.5;
-const MAZE_DOOR_BOTTOM_FRAME: f32 = 0.1;
-const MAZE_DOOR_TOP_FRAME: f32 = 1.0;
-
 #[derive(Component)]
 pub struct MazeDoor {
     door_child: Entity,
-    position: Position,
     maze_direction: MazeDirection
 }
 
@@ -28,7 +23,6 @@ impl MazeDoor {
     pub fn new(        
         commands: &mut Commands<'_, '_>, 
         wall_assets: &Res<MazeAssets>,
-        position: Position,
         maze_direction: MazeDirection
     ) -> Self 
     {
@@ -37,7 +31,6 @@ impl MazeDoor {
 
         MazeDoor { 
             door_child: door,
-            position,
             maze_direction
         }
     }

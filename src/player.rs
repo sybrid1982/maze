@@ -39,7 +39,8 @@ pub struct Controller {
     pub yaw: f32,
     pub sensitivity: f32,
     pub speed: f32,
-    pub mouse_look: bool
+    pub mouse_look: bool,
+    pub draw_gizmos: bool
 }
 
 impl Default for Controller {
@@ -49,17 +50,31 @@ impl Default for Controller {
             yaw: 0.0,
             sensitivity: 0.001,
             speed: consts::PLAYER_SPEED,
-            mouse_look: true
+            mouse_look: true,
+            draw_gizmos: false
         }
     }
 }
 
-#[derive(Component, Default)]
+#[derive(Component)]
 pub struct ControllerInput {
     pub pitch: f32,
     pub yaw: f32,
     pub movement: Vec3,
-    pub mouse_look: bool
+    pub mouse_look: bool,
+    pub draw_gizmos: bool
+}
+
+impl Default for ControllerInput {
+    fn default() -> Self {
+        Self {
+            pitch: 0.0,
+            yaw: 0.0,
+            movement: Vec3::ZERO,
+            mouse_look: true,
+            draw_gizmos: false
+        }
+    }
 }
 
 impl Plugin for PlayerPlugin {
@@ -164,6 +179,9 @@ pub fn controller_input(
         if key_input.pressed(KeyCode::KeyL) {
             input.mouse_look = !input.mouse_look;
         }
+        if key_input.pressed(KeyCode::KeyG) {
+            input.draw_gizmos = !input.draw_gizmos;
+        }
 
         input.movement = Vec3::new(
             get_axis(&key_input, KeyCode::ArrowRight, KeyCode::ArrowLeft),
@@ -178,6 +196,8 @@ pub fn controller_look(mut query: Query<(&mut Controller, &ControllerInput)>) {
         controller.mouse_look = input.mouse_look;
         controller.pitch = input.pitch;
         controller.yaw = input.yaw;
+
+        controller.draw_gizmos = input.draw_gizmos;
     }
 }
 

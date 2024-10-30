@@ -5,5 +5,6 @@ pub enum GameState {
     LoadingScreen,
     LoadingAssets,
     MainMenu,
+    Initialize,
     InGame,
 }

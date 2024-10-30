@@ -1,20 +1,32 @@
+use std::collections::HashMap;
+
 use bevy::prelude::*;
 use rand::Rng;
 
-use crate::{position::Position, random::Random};
+use crate::{consts, position::{MazePosition, Position}, random::Random};
 
-use super::maze_direction::MazeDirection;
+use super::{maze_assets::MazeAssets, maze_cell_edge::{EdgeType, MazeCellEdge}, maze_direction::MazeDirection, maze_room::RoomAssets};
 
 #[derive(Component, Clone)]
 pub struct MazeCell {
     position: Position,
     render: bool,
-    defined_edges: Vec<MazeDirection>
+    defined_edges: Vec<MazeDirection>,
+    edges: HashMap<MazeDirection, Option<MazeCellEdge>>,
+    entity: Option<Entity>,
+    room_index: usize
 }
 
 impl MazeCell {
-    pub fn new(x: f32, y: f32) -> Self {
-        MazeCell { position: Position::new( x, y ), render: false, defined_edges: vec![] }
+    pub fn new(x: f32, y: f32, room_index: usize) -> Self {
+        MazeCell {
+            position: Position::new( x, y ),
+            render: false,
+            defined_edges: vec![],
+            edges: HashMap::new(),
+            entity: None,
+            room_index
+        }
     }
 
     pub fn is_render(&self) -> bool {
@@ -29,9 +41,19 @@ impl MazeCell {
         self.position.clone()
     }
 
-    pub fn add_edge(&mut self, maze_direction: &MazeDirection) {
-        if self.has_edge(&maze_direction) {
+    pub fn add_edge(&mut self, maze_direction: &MazeDirection, edge_type: Option<EdgeType>) {
+        if self.has_edge(maze_direction) {
             panic!("Pushed same edge twice, stopping");
+        }
+
+        match edge_type {
+            Some(edge_type) => {
+                let new_edge = Some(MazeCellEdge::new(maze_direction, edge_type));
+                self.edges.insert(*maze_direction, new_edge);
+            },
+            None => {
+                self.edges.insert(*maze_direction, None);
+            },
         }
 
         self.defined_edges.push(maze_direction.clone());
@@ -60,5 +82,50 @@ impl MazeCell {
             }
         }
         panic!("Ran out of possible edges before ran out of skips");
+    }
+
+    pub fn render_cell(&mut self, commands: &mut Commands<'_, '_>, meshes: &mut ResMut<'_, Assets<Mesh>>, floor_material: Handle<StandardMaterial>, room_assets: RoomAssets, floors: Entity) {
+        let translation = self.get_position().to_vec3_by_scale(consts::MAZE_SCALE);
+        if self.is_render() {
+            self.render_floor(commands, meshes, floor_material, translation, floors);
+            self.render_walls(commands, room_assets);
+        }
+    }
+
+    fn render_floor(&mut self, commands: &mut Commands<'_, '_>, meshes: &mut ResMut<'_, Assets<Mesh>>, floor_material: Handle<StandardMaterial>, translation: Vec3, floors: Entity) {
+        let floor = commands.spawn( (
+            PbrBundle {
+                mesh: meshes.add(Rectangle::new(consts::MAZE_SCALE, consts::MAZE_SCALE)),
+                material: floor_material,
+                transform: Transform { translation, rotation: Quat::from_rotation_x(-std::f32::consts::FRAC_PI_2), ..default() },
+                ..default()
+            },
+            MazePosition(self.get_position().get_as_vec2()),
+            Name::new(format!("Floor: {:#?}", self.get_position()))
+        )).id();
+        self.entity = Some(floor);
+        commands.entity(floors).push_children(&[floor]);
+    }
+    
+    fn render_walls(
+        &self,
+        commands: &mut Commands<'_, '_>,
+        wall_assets: RoomAssets) {
+    
+        for (_maze_direction, edge) in &self.edges {
+            match edge {
+                Some(edge) => {
+                    let new_edge = edge.create_edge_entity(commands, &wall_assets);
+                    commands
+                        .entity(self.entity.expect("somehow adding edge entity to non-existant floor"))
+                        .push_children(&[new_edge.expect("somehow adding edge that isn't an edge")]);
+                }
+                None => {},
+            }
+        }
+    }
+
+    pub fn get_room_index(&self) -> usize {
+        self.room_index
     }
 }

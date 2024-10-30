@@ -47,18 +47,34 @@ impl Collider {
         )
     }
 
-    pub fn get_wall_aabb2d(transform: &Transform, wall_facing: &MazeDirection) -> Aabb2d {
-        let wall_half_size = match wall_facing {
-            MazeDirection::EAST => Vec2::new(consts::WALL_THICKNESS / 2., consts::MAZE_SCALE / 2.),
-            MazeDirection::WEST => Vec2::new(consts::WALL_THICKNESS / 2., consts::MAZE_SCALE / 2.),
-            MazeDirection::NORTH => Vec2::new(consts::MAZE_SCALE / 2., consts::WALL_THICKNESS / 2. ),
-            MazeDirection::SOUTH => Vec2::new(consts::MAZE_SCALE / 2., consts::WALL_THICKNESS / 2.),
-        };
+    pub fn get_wall_aabb2d(transform: &GlobalTransform, wall_facing: &MazeDirection) -> Aabb2d {
+        let wall_size = get_wall_size(wall_facing);
+
+        let mid_point = get_wall_midpoint(transform, wall_facing);
 
         Aabb2d::new(
-            Vec2::new(transform.translation.x, transform.translation.z) - Vec2::new(wall_facing.get_wall_fudge().x, wall_facing.get_wall_fudge().z),
-            wall_half_size
+            mid_point,
+            wall_size
         )
+    }
+}
+
+fn get_wall_size(wall_facing: &MazeDirection) -> Vec2 {
+    let wall_half_size = match wall_facing {
+        MazeDirection::EAST => Vec2::new(consts::WALL_THICKNESS, consts::MAZE_SCALE / 2.),
+        MazeDirection::WEST => Vec2::new(consts::WALL_THICKNESS, consts::MAZE_SCALE / 2.),
+        MazeDirection::NORTH => Vec2::new(consts::MAZE_SCALE / 2., consts::WALL_THICKNESS ),
+        MazeDirection::SOUTH => Vec2::new(consts::MAZE_SCALE / 2., consts::WALL_THICKNESS ),
+    };
+    wall_half_size
+}
+
+fn get_wall_midpoint(transform: &GlobalTransform, wall_facing: &MazeDirection) -> Vec2 {
+    match wall_facing {
+        MazeDirection::NORTH => Vec2::new(transform.translation().x + 2.5, transform.translation().z),
+        MazeDirection::EAST =>  Vec2::new(transform.translation().x , transform.translation().z + 2.5),
+        MazeDirection::SOUTH => Vec2::new(transform.translation().x - 2.5, transform.translation().z),
+        MazeDirection::WEST =>  Vec2::new(transform.translation().x, transform.translation().z - 2.5)
     }
 }
 
