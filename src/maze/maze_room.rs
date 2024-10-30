@@ -18,6 +18,7 @@ pub struct MazeRoomSettings {
 pub struct RoomAssets {
     pub wall: Handle<Scene>,
     pub doorway: Handle<Scene>,
+    pub door: Handle<Scene>,
     pub other_furniture: HashMap<String, Handle<Scene>>
 }
 
@@ -57,7 +58,11 @@ impl MazeRooms {
         let bathroom_tile = generate_material_from_image(materials, assets.bathroom_tile.clone());
         let kitchen_tile = generate_material_from_image(materials, assets.kitchen_tile.clone());
 
-        let default_room_assets = RoomAssets { wall: assets.basic_wall.clone(), doorway: assets.doorway.clone(), other_furniture: HashMap::new(), };
+        let default_room_assets = RoomAssets { 
+            wall: assets.basic_wall.clone(),
+            doorway: assets.doorway.clone(),
+            door: assets.door.clone(),
+            other_furniture: HashMap::new(), };
 
         MazeRooms {
             all_settings: vec![

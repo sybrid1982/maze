@@ -74,6 +74,10 @@ impl MazeCellEdge {
                 Name::new(format!("Door {:#?}", self.get_maze_direction()))
             )).id();
 
+            let door = MazeDoor::new(commands, room_assets.door.clone(), self.get_maze_direction()).get_door_child();
+
+            commands.entity(doorway).push_children(&[door]);
+
             return Some(doorway);
         } else {
             return None;

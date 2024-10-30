@@ -22,12 +22,12 @@ pub struct MazeDoor {
 impl MazeDoor {
     pub fn new(        
         commands: &mut Commands<'_, '_>, 
-        wall_assets: &Res<MazeAssets>,
+        door_handle: Handle<Scene>,
         maze_direction: MazeDirection
     ) -> Self 
     {
         // create the door frame entity
-        let door = MazeDoor::get_door_render(commands, wall_assets);
+        let door = MazeDoor::get_door_render(commands, door_handle);
 
         MazeDoor { 
             door_child: door,
@@ -41,11 +41,11 @@ impl MazeDoor {
 
     pub fn get_door_render(
         commands: &mut Commands<'_, '_>,
-        wall_assets: &Res<MazeAssets>
+        door: Handle<Scene>
     ) -> Entity {
         let door = commands.spawn( (
             SceneBundle {
-                scene: wall_assets.door.clone(),
+                scene: door,
                 transform: Transform::from_xyz(0.75,0.,0.0)
                     .with_scale(Vec3::new(1.0, 1.0, 1.0)),
                 ..default()
