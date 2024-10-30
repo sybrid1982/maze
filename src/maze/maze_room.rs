@@ -62,12 +62,18 @@ impl MazeRooms {
             wall: assets.basic_wall.clone(),
             doorway: assets.doorway.clone(),
             door: assets.door.clone(),
-            other_furniture: HashMap::new(), };
+            other_furniture: HashMap::new()
+        };
+
+        let mut default_room_assets_with_wall_light = default_room_assets.clone();
+        default_room_assets_with_wall_light.other_furniture.insert(String::from("wall_light"), assets.wall_light.clone());
+        let mut default_room_assets_with_wall_light_2 = default_room_assets.clone();
+        default_room_assets_with_wall_light_2.other_furniture.insert(String::from("wall_light"), assets.wall_light_2.clone());
 
         MazeRooms {
             all_settings: vec![
-                MazeRoomSettings { room_assets: default_room_assets.clone(), floor: basic_carpet, name: String::from("Basic Room") },
-                MazeRoomSettings { room_assets: default_room_assets.clone(), floor: second_carpet, name: String::from("Second Basic Room") },
+                MazeRoomSettings { room_assets: default_room_assets_with_wall_light.clone(), floor: basic_carpet, name: String::from("Basic Room") },
+                MazeRoomSettings { room_assets: default_room_assets_with_wall_light_2.clone(), floor: second_carpet, name: String::from("Second Basic Room") },
                 MazeRoomSettings { room_assets: default_room_assets.clone(), floor: bathroom_tile, name: String::from("Bathroom") },
                 MazeRoomSettings { room_assets: default_room_assets.clone(), floor: kitchen_tile, name: String::from("Kitchen") },
             ],

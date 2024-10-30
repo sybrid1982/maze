@@ -8,7 +8,9 @@ pub struct MazeAssets {
     pub carpet_1: Handle<Image>,
     pub carpet_2: Handle<Image>,
     pub bathroom_tile: Handle<Image>,
-    pub kitchen_tile: Handle<Image>
+    pub kitchen_tile: Handle<Image>,
+    pub wall_light: Handle<Scene>,
+    pub wall_light_2: Handle<Scene>
 }
 
 impl MazeAssets {
@@ -24,7 +26,8 @@ impl MazeAssets {
             carpet_2: server.load("Carpet_05.png"),
             bathroom_tile: server.load("Tile_Bathroom_01.png"),
             kitchen_tile: server.load("Tile_Kitchen_01.png"),
-        
+            wall_light: server.load("wall_light.glb#Scene0"),
+            wall_light_2: server.load("wall_light_2.glb#Scene0")
         });
     }
 }
