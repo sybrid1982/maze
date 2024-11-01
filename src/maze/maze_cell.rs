@@ -88,7 +88,8 @@ impl MazeCell {
         let translation = self.get_position().to_vec3_by_scale(consts::MAZE_SCALE);
         if self.is_render() {
             self.render_floor(commands, meshes, floor_material, translation, floors);
-            self.render_walls(commands, room_assets);
+            self.render_ceiling(commands, &room_assets);
+            self.render_walls(commands, &room_assets);
         }
     }
 
@@ -106,16 +107,33 @@ impl MazeCell {
         self.entity = Some(floor);
         commands.entity(floors).push_children(&[floor]);
     }
+
+    fn render_ceiling(&mut self, commands: &mut Commands, room_assets: &RoomAssets) {
+        let half_cell = consts::MAZE_SCALE / 2.;
+        let transform = Transform::from_xyz(-half_cell, half_cell, 6.0)
+            .with_rotation(Quat::from_euler(EulerRot::XYZ, std::f32::consts::FRAC_PI_2, 0.0, 0.0 ))
+            .with_scale(Vec3::splat(2.0));
+        let ceiling = commands.spawn( (
+            SceneBundle {
+                scene: room_assets.ceiling.clone(),
+                transform,
+                ..default()
+            },
+        )).id();
+        commands
+            .entity(self.entity.expect("Somehow adding ceiling to room with no floor?"))
+            .push_children(&[ceiling]);
+}
     
     fn render_walls(
         &self,
         commands: &mut Commands<'_, '_>,
-        wall_assets: RoomAssets) {
+        room_assets: &RoomAssets) {
     
         for (_maze_direction, edge) in &self.edges {
             match edge {
                 Some(edge) => {
-                    let new_edge = edge.create_edge_entity(commands, &wall_assets);
+                    let new_edge = edge.create_edge_entity(commands, &room_assets);
                     commands
                         .entity(self.entity.expect("somehow adding edge entity to non-existant floor"))
                         .push_children(&[new_edge.expect("somehow adding edge that isn't an edge")]);

@@ -19,6 +19,7 @@ pub struct RoomAssets {
     pub wall: Handle<Scene>,
     pub doorway: Handle<Scene>,
     pub door: Handle<Scene>,
+    pub ceiling: Handle<Scene>,
     pub other_furniture: HashMap<String, Handle<Scene>>
 }
 
@@ -62,6 +63,7 @@ impl MazeRooms {
             wall: assets.basic_wall.clone(),
             doorway: assets.doorway.clone(),
             door: assets.door.clone(),
+            ceiling: assets.ceiling.clone(),
             other_furniture: HashMap::new()
         };
 
