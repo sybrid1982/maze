@@ -1,3 +1,5 @@
+use std::usize;
+
 use bevy::prelude::*;
 use rand::Rng;
 
@@ -5,8 +7,9 @@ use crate::consts;
 use crate::position::Position;
 use crate::random::Random;
 use super::maze_cell::MazeCell;
-use super::maze_cell_edge::MazeCellEdge;
-use super::maze_door::MazeDoor;
+use super::maze_cell_edge::EdgeType;
+use super::maze_direction::MazeDirection;
+use super::maze_room::MazeRooms;
 use super::paintings::Painting;
 
 #[derive(Default, Resource)]
@@ -14,7 +17,6 @@ pub struct Maze {
     pub size_x: i32,
     pub size_y: i32,
     cells: Vec<MazeCell>,
-    edges: Vec<MazeCellEdge>
 }
 
 impl Maze { 
@@ -23,33 +25,33 @@ impl Maze {
             size_x: x,
             size_y: y,
             cells: vec![],
-            edges: vec![]
         }
     }
 
-    pub fn generate(&mut self, rand: &mut ResMut<Random>) {
+    pub fn generate(&mut self, rand: &mut ResMut<Random>, maze_rooms: &mut ResMut<MazeRooms>) {
         // probably need to check if cells exists, and if it does, wipe it
         
         // will this do it?
         self.cells.clear();
-        self.edges.clear();
 
         let mut active_positions: Vec<Position> = vec![];
-        self.do_first_generation_step(&mut active_positions, rand);
+        self.do_first_generation_step(&mut active_positions, rand, maze_rooms);
 
         while active_positions.len() > 0 {
-            self.do_next_generation_step(&mut active_positions, rand);
+            self.do_next_generation_step(&mut active_positions, rand, maze_rooms);
         }
     }
 
-    fn do_first_generation_step(&mut self, active_positions: &mut Vec<Position>, rand: &mut ResMut<Random>) {
+    fn do_first_generation_step(&mut self, active_positions: &mut Vec<Position>, rand: &mut ResMut<Random>, maze_rooms: &mut ResMut<MazeRooms>) {
         let position = random_position(self.size_x, self.size_y, rand);
         active_positions.push(position.clone());
 
-        self.add_cell(&position)
+        let room_index = maze_rooms.create_room_and_return_index(usize::MAX, rand);
+
+        self.add_cell(&position, room_index)
     }
 
-    fn do_next_generation_step(&mut self, active_positions: &mut Vec<Position>, rand: &mut ResMut<Random>) {
+    fn do_next_generation_step(&mut self, active_positions: &mut Vec<Position>, rand: &mut ResMut<Random>, maze_rooms: &mut ResMut<MazeRooms>) {
         let current_position = active_positions.pop();
         match current_position {
             Some(position) => {
@@ -61,19 +63,15 @@ impl Maze {
                 let new_position = &position + current_cell.get_random_unused_direction_for_cell(rand).to_position_modifier();
                 if self.contains_position(&new_position) {
                     match self.get_cell(&new_position) {
-                        Some(..) => {
-                            self.add_wall_to_position(active_positions, position, new_position, rand);
+                        Some(entered_cell) => {
+                            if current_cell.get_room_index() == entered_cell.get_room_index() {
+                                self.expand_room(active_positions, position, new_position);
+                            } else {
+                                self.add_wall_to_position(active_positions, position, new_position, rand);
+                            }
                         },
                         None => {
-                            active_positions.push(position);
-                            active_positions.push(new_position);
-                            self.add_cell(&new_position);
-                            if rand.gen_range(0. .. 1.) < consts::DOOR_PROBABILITY {
-                                println!("Generated a door");
-                                self.add_door(&position, &new_position)
-                            } else {
-                                self.add_passage(&position, &new_position)
-                            }
+                            self.generate_passage_to_new_cell(active_positions, position, new_position, rand, maze_rooms);
                         }
                     }
                 } else {
@@ -86,56 +84,74 @@ impl Maze {
         }
     }
 
+    fn expand_room(&mut self, active_positions: &mut Vec<Position>, position: Position, new_position: Position) {
+        active_positions.push(position);
+        self.add_passage(&position, &new_position);
+    }
+    
+    fn generate_passage_to_new_cell(&mut self, active_positions: &mut Vec<Position>, position: Position, new_position: Position, rand: &mut ResMut<'_, Random>, maze_rooms: &mut ResMut<MazeRooms>) {
+        active_positions.push(position);
+        active_positions.push(new_position);
+        let current_room_index = self.get_cell_mut(&position).expect("Current cell not in maze somehow").get_room_index();
+        let index_to_exclude = maze_rooms.get_settings_index_from_room_index(current_room_index);
+        if rand.gen_range(0. .. 1.) < consts::DOOR_PROBABILITY {
+            let new_room_index = maze_rooms.create_room_and_return_index(index_to_exclude, rand);
+            self.add_cell(&new_position, new_room_index);
+            self.add_door(&position, &new_position);
+        } else {
+            self.add_cell(&new_position, current_room_index);
+            self.add_passage(&position, &new_position);
+        }
+    }
+    
     fn add_wall_to_position(&mut self, active_positions: &mut Vec<Position>, position: Position, new_position: Position, rand: &mut ResMut<Random>) {
         let maybe_painting = Painting::generate_random_painting(rand);
         active_positions.push(position);
         self.add_wall(&position, &new_position, maybe_painting)
     }
     
-    pub fn add_cell(&mut self, position: &Position) {
-        let mut cell = MazeCell::new(position.x, position.y);
+    pub fn add_cell(&mut self, position: &Position, room_index: usize) {
+        let mut cell = MazeCell::new(position.x, position.y, room_index);
         cell.toggle_render();
         self.cells.push(cell);
     }
 
     pub fn add_wall(&mut self, prev_position: &Position, curr_position: &Position, maybe_painting: Option<Painting>) {
-        let mut wall = MazeCellEdge::new(prev_position.clone(), curr_position.clone());
-        wall.set_wall(maybe_painting);
-        let cell_leaving = self.get_cell(&prev_position);
+        let maze_direction = MazeDirection::get_direction_position_from_positions(prev_position, curr_position);
+        let cell_leaving = self.get_cell_mut(&prev_position);
         match cell_leaving {
             Some(cell) => {
-                cell.add_edge(&wall.get_maze_direction());
+                cell.add_edge(&maze_direction, Some(EdgeType::Wall));
             },
             None => {
             }
         }
-        let cell_entering = self.get_cell(&curr_position);
+        let cell_entering = self.get_cell_mut(&curr_position);
         match cell_entering {
             Some(cell) => {
-                cell.add_edge(&wall.get_maze_direction().get_opposite_direction());
+                cell.add_edge(&maze_direction.get_opposite_direction(), Some(EdgeType::Wall));
             },
             None => {
             }
         }
-        self.edges.push(wall);
     }
 
     fn add_passage(&mut self, prev_position: &Position, curr_position: &Position) {
-        let passage = MazeCellEdge::new(prev_position.clone(), curr_position.clone());
+        let maze_direction = MazeDirection::get_direction_position_from_positions(prev_position, curr_position);
 
-        let cell_leaving = self.get_cell(&prev_position);
+        let cell_leaving = self.get_cell_mut(&prev_position);
         match cell_leaving {
             Some(cell) => {
-                cell.add_edge(&passage.get_maze_direction());
+                cell.add_edge(&maze_direction, None);
             },
             None => {
                 println!("No cell at position {}", format!("{:#?}", prev_position));
             }
         }
-        let cell_entering = self.get_cell(&curr_position);
+        let cell_entering = self.get_cell_mut(&curr_position);
         match cell_entering {
             Some(cell) => {
-                cell.add_edge(&passage.get_maze_direction().get_opposite_direction());
+                cell.add_edge(&maze_direction.get_opposite_direction(), None);
             },
             None => {
                 println!("No cell at position {}", format!("{:#?}", prev_position));
@@ -144,42 +160,38 @@ impl Maze {
     }
 
     fn add_door(&mut self, prev_position: &Position, curr_position: &Position) {
-        let mut doorway = MazeCellEdge::new(prev_position.clone(), curr_position.clone());
-        doorway.set_door();
+        let maze_direction = MazeDirection::get_direction_position_from_positions(prev_position, curr_position);
 
-        let cell_leaving = self.get_cell(&prev_position);
+        let cell_leaving = self.get_cell_mut(&prev_position);
         match cell_leaving {
             Some(cell) => {
-                cell.add_edge(&doorway.get_maze_direction());
+                cell.add_edge(&maze_direction, Some(EdgeType::Doorway));
             },
             None => {
                 println!("No cell at position {}", format!("{:#?}", prev_position));
             }
         }
-        let cell_entering = self.get_cell(&curr_position);
+        let cell_entering = self.get_cell_mut(&curr_position);
         match cell_entering {
             Some(cell) => {
-                cell.add_edge(&doorway.get_maze_direction().get_opposite_direction());
+                cell.add_edge(&maze_direction.get_opposite_direction(), Some(EdgeType::Doorway));
             },
             None => {
                 println!("No cell at position {}", format!("{:#?}", prev_position));
             }
         }
-
-        self.edges.push(doorway);
-
     }
 
-    pub fn get_cells(&self) -> &Vec<MazeCell> {
-        &self.cells
+    pub fn get_cells(&mut self) -> &mut Vec<MazeCell> {
+        &mut self.cells
     }
 
-    pub fn get_edges(&self) -> &Vec<MazeCellEdge> {
-        &self.edges
-    }
-
-    pub fn get_cell(&mut self, position: &Position) -> Option<&mut MazeCell> {
+    pub fn get_cell_mut(&mut self, position: &Position) -> Option<&mut MazeCell> {
         self.cells.iter_mut().find(|cell| cell.get_position() == *position)
+    }
+
+    pub fn get_cell(&self, position: &Position) -> Option<&MazeCell> {
+        self.cells.iter().find(|cell| cell.get_position() == *position)
     }
     
     fn contains_position(&self, position: &Position) -> bool {

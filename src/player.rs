@@ -4,10 +4,11 @@ use std::f32::consts::*;
 
 use bevy::input::mouse::MouseMotion;
 use bevy::prelude::*;
+use bevy::render::view::RenderLayers;
 
 use super::position::Position;
 use super::consts;
-use super::velocity::Velocity;
+use crate::physics::velocity::Velocity;
 
 const ANGLE_EPSILON: f32 = 0.001953125;
 const PLAYER_START_POSITION: Position = Position { x: 0., y: 0. };
@@ -39,7 +40,8 @@ pub struct Controller {
     pub yaw: f32,
     pub sensitivity: f32,
     pub speed: f32,
-    pub mouse_look: bool
+    pub mouse_look: bool,
+    pub draw_gizmos: bool
 }
 
 impl Default for Controller {
@@ -49,17 +51,31 @@ impl Default for Controller {
             yaw: 0.0,
             sensitivity: 0.001,
             speed: consts::PLAYER_SPEED,
-            mouse_look: true
+            mouse_look: true,
+            draw_gizmos: false
         }
     }
 }
 
-#[derive(Component, Default)]
+#[derive(Component)]
 pub struct ControllerInput {
     pub pitch: f32,
     pub yaw: f32,
     pub movement: Vec3,
-    pub mouse_look: bool
+    pub mouse_look: bool,
+    pub draw_gizmos: bool
+}
+
+impl Default for ControllerInput {
+    fn default() -> Self {
+        Self {
+            pitch: 0.0,
+            yaw: 0.0,
+            movement: Vec3::ZERO,
+            mouse_look: true,
+            draw_gizmos: false
+        }
+    }
 }
 
 impl Plugin for PlayerPlugin {
@@ -106,7 +122,7 @@ fn setup (
     let light = (
         SpotLightBundle {
             spot_light: SpotLight {
-                intensity: 40_000.0, // lumens
+                intensity: 60_000.0, // lumens
                 color: Color::WHITE,
                 shadows_enabled: true,
                 inner_angle: PI / 4.0 * 0.85,
@@ -138,6 +154,7 @@ fn setup (
             },
             ..default()
         },
+        RenderLayers::from_layers(&[0,1])
     )).with_children(|parent: &mut ChildBuilder<'_>| {
         parent.spawn(light);
     });
@@ -164,6 +181,9 @@ pub fn controller_input(
         if key_input.pressed(KeyCode::KeyL) {
             input.mouse_look = !input.mouse_look;
         }
+        if key_input.pressed(KeyCode::KeyG) {
+            input.draw_gizmos = !input.draw_gizmos;
+        }
 
         input.movement = Vec3::new(
             get_axis(&key_input, KeyCode::ArrowRight, KeyCode::ArrowLeft),
@@ -178,6 +198,8 @@ pub fn controller_look(mut query: Query<(&mut Controller, &ControllerInput)>) {
         controller.mouse_look = input.mouse_look;
         controller.pitch = input.pitch;
         controller.yaw = input.yaw;
+
+        controller.draw_gizmos = input.draw_gizmos;
     }
 }
 

@@ -1,7 +1,7 @@
 use bevy::prelude::*;
 
-use super::{maze_assets::MazeAssets, maze_direction::MazeDirection};
-use crate::{collider::Collider, position::Position};
+use super::maze_direction::MazeDirection;
+use crate::physics::collider::Collider;
 /**
  * Because a door is more complicated, I want to make sure I have the logic for it all in one place.
  * A door consists of two entities, the frame which is the parent, and the child that is the door itself.
@@ -13,31 +13,24 @@ use crate::{collider::Collider, position::Position};
  * open_door(swing_forward: boolean) -> opens the door.  If swing_forward is true, then we rotate the y axis 90 positive, if false then 90 negative
  */
 
-const MAZE_DOOR_VERTICAL_FRAME: f32 = 0.5;
-const MAZE_DOOR_BOTTOM_FRAME: f32 = 0.1;
-const MAZE_DOOR_TOP_FRAME: f32 = 1.0;
-
 #[derive(Component)]
 pub struct MazeDoor {
     door_child: Entity,
-    position: Position,
     maze_direction: MazeDirection
 }
 
 impl MazeDoor {
     pub fn new(        
         commands: &mut Commands<'_, '_>, 
-        wall_assets: &Res<MazeAssets>,
-        position: Position,
+        door_handle: Handle<Scene>,
         maze_direction: MazeDirection
     ) -> Self 
     {
         // create the door frame entity
-        let door = MazeDoor::get_door_render(commands, wall_assets);
+        let door = MazeDoor::get_door_render(commands, door_handle);
 
         MazeDoor { 
             door_child: door,
-            position,
             maze_direction
         }
     }
@@ -48,11 +41,11 @@ impl MazeDoor {
 
     pub fn get_door_render(
         commands: &mut Commands<'_, '_>,
-        wall_assets: &Res<MazeAssets>
+        door: Handle<Scene>
     ) -> Entity {
         let door = commands.spawn( (
             SceneBundle {
-                scene: wall_assets.door.clone(),
+                scene: door,
                 transform: Transform::from_xyz(0.75,0.,0.0)
                     .with_scale(Vec3::new(1.0, 1.0, 1.0)),
                 ..default()
