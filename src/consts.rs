@@ -5,10 +5,12 @@ pub const MAZE_Y: i32 = 20;
 pub const MAZE_SCALE: f32 = 5.;
 pub const WALL_THICKNESS: f32 = 0.2;
 
-pub const GLOBAL_LIGHT_INTENSITY: f32 = 100.0;
-pub const GLOBAL_LIGHT_TINT: Color = Color::srgb(0.5, 0.1, 0.1);
+pub const GLOBAL_LIGHT_INTENSITY: f32 = 200.0;
+pub const GLOBAL_LIGHT_TINT: Color = Color::WHITE;
 
-pub const DIRECTIONAL_LIGHT_INTENSITY: f32 = 5000.0;
+// pub const GLOBAL_LIGHT_TINT: Color = Color::srgb(0.5, 0.1, 0.1);
+
+pub const DIRECTIONAL_LIGHT_INTENSITY: f32 = 100.0;
 pub const DIRECTIONAL_LIGHT_TINT: Color = Color::WHITE;
 
 pub const PLAYER_SPEED: f32 = 8.;
