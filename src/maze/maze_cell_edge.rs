@@ -1,7 +1,7 @@
 use bevy::prelude::*;
 
-use super::{maze_assets::MazeAssets, maze_direction::MazeDirection, maze_door::MazeDoor, maze_room::RoomAssets, paintings::Painting};
-use crate::{collider::Collider, consts};
+use super::{maze_direction::MazeDirection, maze_door::MazeDoor, maze_room::RoomAssets, paintings::Painting};
+use crate::physics::collider::Collider;
 
 
 #[derive(Default, Copy, Clone, PartialEq)]

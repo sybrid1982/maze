@@ -95,7 +95,6 @@ impl Maze {
         let current_room_index = self.get_cell_mut(&position).expect("Current cell not in maze somehow").get_room_index();
         let index_to_exclude = maze_rooms.get_settings_index_from_room_index(current_room_index);
         if rand.gen_range(0. .. 1.) < consts::DOOR_PROBABILITY {
-            println!("Generated a door");
             let new_room_index = maze_rooms.create_room_and_return_index(index_to_exclude, rand);
             self.add_cell(&new_position, new_room_index);
             self.add_door(&position, &new_position);

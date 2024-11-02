@@ -4,10 +4,11 @@ use std::f32::consts::*;
 
 use bevy::input::mouse::MouseMotion;
 use bevy::prelude::*;
+use bevy::render::view::RenderLayers;
 
 use super::position::Position;
 use super::consts;
-use super::velocity::Velocity;
+use crate::physics::velocity::Velocity;
 
 const ANGLE_EPSILON: f32 = 0.001953125;
 const PLAYER_START_POSITION: Position = Position { x: 0., y: 0. };
@@ -121,7 +122,7 @@ fn setup (
     let light = (
         SpotLightBundle {
             spot_light: SpotLight {
-                intensity: 40_000.0, // lumens
+                intensity: 60_000.0, // lumens
                 color: Color::WHITE,
                 shadows_enabled: true,
                 inner_angle: PI / 4.0 * 0.85,
@@ -153,6 +154,7 @@ fn setup (
             },
             ..default()
         },
+        RenderLayers::from_layers(&[0,1])
     )).with_children(|parent: &mut ChildBuilder<'_>| {
         parent.spawn(light);
     });

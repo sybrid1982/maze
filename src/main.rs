@@ -1,7 +1,7 @@
-use bevy::{prelude::*, render::camera::Viewport};
+use bevy::{prelude::*, render::{camera::Viewport, view::RenderLayers}};
 
 use bevy_inspector_egui::quick::WorldInspectorPlugin;
-use maze::{maze_assets::MazeAssets, maze_cell_edge::WallPosition, maze_direction::MazeDirection, maze_room::MazeRooms};
+use maze::{maze_assets::MazeAssets, maze_room::MazeRooms};
 use rand::SeedableRng;
 use rand_chacha::ChaCha8Rng;
 
@@ -9,18 +9,18 @@ use crate::maze::maze::Maze;
 
 use player::{LogicalPlayer, PlayerPlugin};
 use random::Random;
-use collider::Collider;
-use velocity::{Velocity, VelocityPlugin};
 use game_states::GameState;
+use physics::physics::PhysicsPlugin;
 
 mod maze;
 mod position;
 mod player;
 mod random;
 mod consts;
-mod collider;
-mod velocity;
+mod physics;
 mod game_states;
+mod apply_render_layers_to_children;
+mod assets;
 
 #[derive(Component)]
 struct TopDownCamera;
@@ -46,8 +46,8 @@ fn main() {
         .add_systems(OnEnter(GameState::Initialize), generate_maze)
         .add_systems(OnEnter(GameState::InGame), render_maze)
         .add_plugins(PlayerPlugin)
-        .add_plugins(VelocityPlugin)
-        .add_systems(Update, (check_for_collisions, move_minimap_position).in_set(GameRunSet).run_if(in_state(GameState::InGame)))
+        .add_systems(Update, (move_minimap_position).run_if(in_state(GameState::InGame)))
+        .add_plugins(PhysicsPlugin)
         .run();
 }
 
@@ -71,7 +71,7 @@ fn render_maze(
 }
 
 fn initialize_maze_rooms(mut commands: Commands, maze_assets: Res<MazeAssets>, mut materials: ResMut<'_, Assets<StandardMaterial>>, mut next_state: ResMut<NextState<GameState>>) {
-    let mut maze_rooms = MazeRooms::new(maze_assets, &mut materials);
+    let maze_rooms = MazeRooms::new(maze_assets, &mut materials);
     commands.insert_resource(maze_rooms);
     next_state.set(GameState::Initialize);
 }
@@ -128,6 +128,7 @@ fn add_top_view_camera(mut commands: Commands<'_, '_>) {
             },
             ..default()
         },
+        RenderLayers::layer(0),
         TopDownCamera
     ));
 }
@@ -154,36 +155,6 @@ fn generate_empty_object_with_name(commands: &mut Commands<'_, '_>, name: &str) 
         },
         Name::new(String::from(name)))
     ).id()
-}
-
-fn check_for_collisions(
-    mut player_query: Query<(&mut Velocity, &Transform), With<LogicalPlayer>>,
-    collider_query: Query<(&GlobalTransform, &WallPosition), (With<Collider>, Without<LogicalPlayer>)>,
-) {
-    let (mut player_velocity, player_transform) = player_query.single_mut();
-
-    let player_collider = Collider::transform_to_aabb2d(player_transform);
-
-    let mut number_of_collisions = 0;
-
-    for (collider_transform, wall_position) in collider_query.iter() {
-        // need to get the dimensions of the wall and the dimensions of the player size
-        // then use those to determine if one is inside the other
-        let wall_collider = Collider::get_wall_aabb2d(&collider_transform, &wall_position);
-        let collision = Collider::box_collision(player_collider, wall_collider);
-
-        if let Some(collision) = collision {
-            // collision_events.send(CollisionEvent);
-            match collision {
-                MazeDirection::EAST => player_velocity.x = f32::min(player_velocity.x, 0.),
-                MazeDirection::WEST => player_velocity.x = f32::max(player_velocity.x, 0.),
-                MazeDirection::NORTH => player_velocity.y = f32::min(player_velocity.y, 0.),
-                MazeDirection::SOUTH => player_velocity.y = f32::max(player_velocity.y, 0.)
-            }
-
-            number_of_collisions = number_of_collisions + 1;
-        }
-    }
 }
 
 fn move_minimap_position(

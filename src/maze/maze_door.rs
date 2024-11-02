@@ -1,7 +1,7 @@
 use bevy::prelude::*;
 
-use super::{maze_assets::MazeAssets, maze_direction::MazeDirection};
-use crate::{collider::Collider};
+use super::maze_direction::MazeDirection;
+use crate::physics::collider::Collider;
 /**
  * Because a door is more complicated, I want to make sure I have the logic for it all in one place.
  * A door consists of two entities, the frame which is the parent, and the child that is the door itself.

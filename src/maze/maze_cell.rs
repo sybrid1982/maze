@@ -1,11 +1,11 @@
 use std::collections::HashMap;
 
-use bevy::prelude::*;
+use bevy::{prelude::*, render::view::RenderLayers};
 use rand::Rng;
 
 use crate::{consts, position::{MazePosition, Position}, random::Random};
 
-use super::{maze_assets::MazeAssets, maze_cell_edge::{EdgeType, MazeCellEdge}, maze_direction::MazeDirection, maze_room::RoomAssets};
+use super::{maze_cell_edge::{EdgeType, MazeCellEdge}, maze_direction::MazeDirection, maze_room::RoomAssets};
 
 #[derive(Component, Clone)]
 pub struct MazeCell {
@@ -109,6 +109,7 @@ impl MazeCell {
     }
 
     fn render_ceiling(&mut self, commands: &mut Commands, room_assets: &RoomAssets) {
+        // TODO: Make this only render for the FPS camera and not the top down camera
         let half_cell = consts::MAZE_SCALE / 2.;
         let transform = Transform::from_xyz(-half_cell, half_cell, 6.0)
             .with_rotation(Quat::from_euler(EulerRot::XYZ, std::f32::consts::FRAC_PI_2, 0.0, 0.0 ))
@@ -119,6 +120,7 @@ impl MazeCell {
                 transform,
                 ..default()
             },
+            RenderLayers::layer(1)
         )).id();
         commands
             .entity(self.entity.expect("Somehow adding ceiling to room with no floor?"))

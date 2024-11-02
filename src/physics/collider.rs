@@ -3,8 +3,20 @@ use bevy::{
     math::bounding::Aabb2d
 };
 
-use super::maze::maze_direction::MazeDirection;
-use super::consts;
+use crate::maze::maze_cell_edge::WallPosition;
+use crate::player::LogicalPlayer;
+use super::velocity::Velocity;
+use crate::GameRunSet;
+
+use crate::maze::maze_direction::MazeDirection;
+use crate::consts;
+
+pub struct ColliderPlugin;
+impl Plugin for ColliderPlugin {
+    fn build(&self, app: &mut App) {
+        app.add_systems(Update, (check_for_collisions).in_set(GameRunSet));
+    }
+}
 
 #[derive(Component)]
 pub struct Collider;
@@ -117,4 +129,34 @@ fn is_collision_on_south(moving_collider: Aabb2d, static_collider: Aabb2d, colli
     (value_inside_range(moving_collider.min.x, static_collider.min.x, static_collider.max.x) ||
     value_inside_range(moving_collider.max.x, static_collider.min.x, static_collider.max.x)) &&
     collision_orientation == CollisionOrientation::HORIZONTAL
+}
+
+pub(crate) fn check_for_collisions(
+    mut player_query: Query<(&mut Velocity, &Transform), With<LogicalPlayer>>,
+    collider_query: Query<(&GlobalTransform, &WallPosition), (With<Collider>, Without<LogicalPlayer>)>,
+) {
+    let (mut player_velocity, player_transform) = player_query.single_mut();
+
+    let player_collider = Collider::transform_to_aabb2d(player_transform);
+
+    let mut number_of_collisions = 0;
+
+    for (collider_transform, wall_position) in collider_query.iter() {
+        // need to get the dimensions of the wall and the dimensions of the player size
+        // then use those to determine if one is inside the other
+        let wall_collider = Collider::get_wall_aabb2d(&collider_transform, &wall_position);
+        let collision = Collider::box_collision(player_collider, wall_collider);
+
+        if let Some(collision) = collision {
+            // collision_events.send(CollisionEvent);
+            match collision {
+                MazeDirection::EAST => player_velocity.x = f32::min(player_velocity.x, 0.),
+                MazeDirection::WEST => player_velocity.x = f32::max(player_velocity.x, 0.),
+                MazeDirection::NORTH => player_velocity.y = f32::min(player_velocity.y, 0.),
+                MazeDirection::SOUTH => player_velocity.y = f32::max(player_velocity.y, 0.)
+            }
+
+            number_of_collisions = number_of_collisions + 1;
+        }
+    }
 }
