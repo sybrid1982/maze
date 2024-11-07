@@ -65,7 +65,7 @@ impl Maze {
                     match self.get_cell(&new_position) {
                         Some(entered_cell) => {
                             if current_cell.get_room_index() == entered_cell.get_room_index() {
-                                self.expand_room(active_positions, position, new_position);
+                                self.expand_room(active_positions, position, new_position, rand);
                             } else {
                                 self.add_wall_to_position(active_positions, position, new_position, rand);
                             }
@@ -84,9 +84,9 @@ impl Maze {
         }
     }
 
-    fn expand_room(&mut self, active_positions: &mut Vec<Position>, position: Position, new_position: Position) {
+    fn expand_room(&mut self, active_positions: &mut Vec<Position>, position: Position, new_position: Position, rand: &mut ResMut<'_, Random>) {
         active_positions.push(position);
-        self.add_passage(&position, &new_position);
+        self.add_passage(&position, &new_position, rand);
     }
     
     fn generate_passage_to_new_cell(&mut self, active_positions: &mut Vec<Position>, position: Position, new_position: Position, rand: &mut ResMut<'_, Random>, maze_rooms: &mut ResMut<MazeRooms>) {
@@ -97,17 +97,16 @@ impl Maze {
         if rand.gen_range(0. .. 1.) < consts::DOOR_PROBABILITY {
             let new_room_index = maze_rooms.create_room_and_return_index(index_to_exclude, rand);
             self.add_cell(&new_position, new_room_index);
-            self.add_door(&position, &new_position);
+            self.add_door(&position, &new_position, rand);
         } else {
             self.add_cell(&new_position, current_room_index);
-            self.add_passage(&position, &new_position);
+            self.add_passage(&position, &new_position, rand);
         }
     }
     
     fn add_wall_to_position(&mut self, active_positions: &mut Vec<Position>, position: Position, new_position: Position, rand: &mut ResMut<Random>) {
-        let maybe_painting = Painting::generate_random_painting(rand);
         active_positions.push(position);
-        self.add_wall(&position, &new_position, maybe_painting)
+        self.add_wall(&position, &new_position, rand)
     }
     
     pub fn add_cell(&mut self, position: &Position, room_index: usize) {
@@ -116,12 +115,12 @@ impl Maze {
         self.cells.push(cell);
     }
 
-    pub fn add_wall(&mut self, prev_position: &Position, curr_position: &Position, maybe_painting: Option<Painting>) {
+    pub fn add_wall(&mut self, prev_position: &Position, curr_position: &Position, rand: &mut ResMut<Random>) {
         let maze_direction = MazeDirection::get_direction_position_from_positions(prev_position, curr_position);
         let cell_leaving = self.get_cell_mut(&prev_position);
         match cell_leaving {
             Some(cell) => {
-                cell.add_edge(&maze_direction, Some(EdgeType::Wall));
+                cell.add_edge(&maze_direction, Some(EdgeType::Wall) , rand);
             },
             None => {
             }
@@ -129,20 +128,20 @@ impl Maze {
         let cell_entering = self.get_cell_mut(&curr_position);
         match cell_entering {
             Some(cell) => {
-                cell.add_edge(&maze_direction.get_opposite_direction(), Some(EdgeType::Wall));
+                cell.add_edge(&maze_direction.get_opposite_direction(), Some(EdgeType::Wall), rand);
             },
             None => {
             }
         }
     }
 
-    fn add_passage(&mut self, prev_position: &Position, curr_position: &Position) {
+    fn add_passage(&mut self, prev_position: &Position, curr_position: &Position, rand: &mut ResMut<Random>) {
         let maze_direction = MazeDirection::get_direction_position_from_positions(prev_position, curr_position);
 
         let cell_leaving = self.get_cell_mut(&prev_position);
         match cell_leaving {
             Some(cell) => {
-                cell.add_edge(&maze_direction, None);
+                cell.add_edge(&maze_direction, None, rand);
             },
             None => {
                 println!("No cell at position {}", format!("{:#?}", prev_position));
@@ -151,7 +150,7 @@ impl Maze {
         let cell_entering = self.get_cell_mut(&curr_position);
         match cell_entering {
             Some(cell) => {
-                cell.add_edge(&maze_direction.get_opposite_direction(), None);
+                cell.add_edge(&maze_direction.get_opposite_direction(), None, rand);
             },
             None => {
                 println!("No cell at position {}", format!("{:#?}", prev_position));
@@ -159,13 +158,13 @@ impl Maze {
         }
     }
 
-    fn add_door(&mut self, prev_position: &Position, curr_position: &Position) {
+    fn add_door(&mut self, prev_position: &Position, curr_position: &Position, rand: &mut ResMut<Random>) {
         let maze_direction = MazeDirection::get_direction_position_from_positions(prev_position, curr_position);
 
         let cell_leaving = self.get_cell_mut(&prev_position);
         match cell_leaving {
             Some(cell) => {
-                cell.add_edge(&maze_direction, Some(EdgeType::Doorway));
+                cell.add_edge(&maze_direction, Some(EdgeType::Doorway), rand);
             },
             None => {
                 println!("No cell at position {}", format!("{:#?}", prev_position));
@@ -174,7 +173,7 @@ impl Maze {
         let cell_entering = self.get_cell_mut(&curr_position);
         match cell_entering {
             Some(cell) => {
-                cell.add_edge(&maze_direction.get_opposite_direction(), Some(EdgeType::Doorway));
+                cell.add_edge(&maze_direction.get_opposite_direction(), Some(EdgeType::Doorway), rand);
             },
             None => {
                 println!("No cell at position {}", format!("{:#?}", prev_position));

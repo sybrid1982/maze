@@ -4,7 +4,7 @@ use bevy::{
 };
 
 use crate::maze::maze_cell_edge::WallPosition;
-use crate::player::LogicalPlayer;
+use crate::player::player::LogicalPlayer;
 use super::velocity::Velocity;
 use crate::GameRunSet;
 
@@ -131,6 +131,11 @@ fn is_collision_on_south(moving_collider: Aabb2d, static_collider: Aabb2d, colli
     collision_orientation == CollisionOrientation::HORIZONTAL
 }
 
+// right now this is checking every collider against the player.
+// however, for walls and doors, the only time a player is going to be able to collide with them is
+// when they are in the same cell as the collider.
+// Ergo, we should be able to to instead get the player's cell, and then check collision with the objects
+// for that cell
 pub(crate) fn check_for_collisions(
     mut player_query: Query<(&mut Velocity, &Transform), With<LogicalPlayer>>,
     collider_query: Query<(&GlobalTransform, &WallPosition), (With<Collider>, Without<LogicalPlayer>)>,

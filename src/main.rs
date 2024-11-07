@@ -7,7 +7,7 @@ use rand_chacha::ChaCha8Rng;
 
 use crate::maze::maze::Maze;
 
-use player::{LogicalPlayer, PlayerPlugin};
+use player::player::{LogicalPlayer, PlayerPlugin};
 use random::Random;
 use game_states::GameState;
 use physics::physics::PhysicsPlugin;

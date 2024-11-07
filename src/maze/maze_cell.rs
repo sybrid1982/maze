@@ -1,4 +1,5 @@
 use std::collections::HashMap;
+use std::f32::consts::*;
 
 use bevy::{prelude::*, render::view::RenderLayers};
 use rand::Rng;
@@ -41,15 +42,17 @@ impl MazeCell {
         self.position.clone()
     }
 
-    pub fn add_edge(&mut self, maze_direction: &MazeDirection, edge_type: Option<EdgeType>) {
+    pub fn add_edge(&mut self, maze_direction: &MazeDirection, edge_type: Option<EdgeType>, rand: &mut ResMut<Random>) {
         if self.has_edge(maze_direction) {
             panic!("Pushed same edge twice, stopping");
         }
 
         match edge_type {
             Some(edge_type) => {
-                let new_edge = Some(MazeCellEdge::new(maze_direction, edge_type));
-                self.edges.insert(*maze_direction, new_edge);
+                let mut new_edge = MazeCellEdge::new(maze_direction, edge_type);
+                new_edge.generate_furniture(rand);
+                let new_edge_option = Some(new_edge);
+                self.edges.insert(*maze_direction, new_edge_option);
             },
             None => {
                 self.edges.insert(*maze_direction, None);
@@ -98,7 +101,7 @@ impl MazeCell {
             PbrBundle {
                 mesh: meshes.add(Rectangle::new(consts::MAZE_SCALE, consts::MAZE_SCALE)),
                 material: floor_material,
-                transform: Transform { translation, rotation: Quat::from_rotation_x(-std::f32::consts::FRAC_PI_2), ..default() },
+                transform: Transform { translation, rotation: Quat::from_rotation_x(-FRAC_PI_2), ..default() },
                 ..default()
             },
             MazePosition(self.get_position().get_as_vec2()),
@@ -112,7 +115,7 @@ impl MazeCell {
         // TODO: Make this only render for the FPS camera and not the top down camera
         let half_cell = consts::MAZE_SCALE / 2.;
         let transform = Transform::from_xyz(-half_cell, half_cell, 6.0)
-            .with_rotation(Quat::from_euler(EulerRot::XYZ, std::f32::consts::FRAC_PI_2, 0.0, 0.0 ))
+            .with_rotation(Quat::from_euler(EulerRot::XYZ, FRAC_PI_2, 0.0, 0.0 ))
             .with_scale(Vec3::splat(2.0));
         let ceiling = commands.spawn( (
             SceneBundle {
