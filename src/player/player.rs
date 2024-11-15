@@ -113,7 +113,7 @@ fn setup (
         PbrBundle {
             mesh: meshes.add(Cuboid::new(consts::PLAYER_LENGTH, consts::PLAYER_HEIGHT, consts::PLAYER_WIDTH)),
             material: materials.add(Color::srgb(0.7,0.1,0.2)),
-            transform: Transform::from_xyz(PLAYER_START_POSITION.x, consts::MAZE_SCALE as f32 / 2., PLAYER_START_POSITION.y),
+            transform: Transform::from_xyz(PLAYER_START_POSITION.x, consts::MAZE_SCALE / 2., PLAYER_START_POSITION.y),
             ..default()
         },
         LogicalPlayer,
@@ -225,7 +225,7 @@ pub fn controller_move(
             move_direction /= move_direction.length()
         }
 
-        velocity.set_velocity(Vec2::new((move_direction.x * controller.speed), (move_direction.z * controller.speed)));
+        velocity.set_velocity(Vec2::new(move_direction.x * controller.speed, move_direction.z * controller.speed));
     }
 }
 

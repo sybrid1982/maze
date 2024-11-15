@@ -72,13 +72,13 @@ impl Collider {
 }
 
 fn get_wall_size(wall_facing: &MazeDirection) -> Vec2 {
-    let wall_half_size = match wall_facing {
+    
+    match wall_facing {
         MazeDirection::EAST => Vec2::new(consts::WALL_THICKNESS, consts::MAZE_SCALE / 2.),
         MazeDirection::WEST => Vec2::new(consts::WALL_THICKNESS, consts::MAZE_SCALE / 2.),
         MazeDirection::NORTH => Vec2::new(consts::MAZE_SCALE / 2., consts::WALL_THICKNESS ),
         MazeDirection::SOUTH => Vec2::new(consts::MAZE_SCALE / 2., consts::WALL_THICKNESS ),
-    };
-    wall_half_size
+    }
 }
 
 fn get_wall_midpoint(transform: &GlobalTransform, wall_facing: &MazeDirection) -> Vec2 {
@@ -149,7 +149,7 @@ pub(crate) fn check_for_collisions(
     for (collider_transform, wall_position) in collider_query.iter() {
         // need to get the dimensions of the wall and the dimensions of the player size
         // then use those to determine if one is inside the other
-        let wall_collider = Collider::get_wall_aabb2d(&collider_transform, &wall_position);
+        let wall_collider = Collider::get_wall_aabb2d(collider_transform, wall_position);
         let collision = Collider::box_collision(player_collider, wall_collider);
 
         if let Some(collision) = collision {
@@ -161,7 +161,7 @@ pub(crate) fn check_for_collisions(
                 MazeDirection::SOUTH => player_velocity.y = f32::max(player_velocity.y, 0.)
             }
 
-            number_of_collisions = number_of_collisions + 1;
+            number_of_collisions += 1;
         }
     }
 }

@@ -21,8 +21,8 @@ impl PaintingType {
     }
 
     pub fn get_painting_type_from_index(index: u32) -> PaintingType {
-        let painting_type = unsafe { ::std::mem::transmute(index) };
-        painting_type
+        
+        unsafe { ::std::mem::transmute(index) }
     }
 
     pub fn get_random_painting_type(rand: &mut ResMut<Random>) -> PaintingType {
@@ -50,8 +50,8 @@ impl PaintingColor {
     }
 
     pub fn get_painting_color_from_index(index: u32) -> PaintingColor {
-        let color = unsafe { ::std::mem::transmute(index) };
-        color
+        
+        unsafe { ::std::mem::transmute(index) }
     }
 
     pub fn get_random_painting_color(rand: &mut ResMut<Random>) -> PaintingColor {

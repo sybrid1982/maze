@@ -43,20 +43,12 @@ impl MazeRoom {
     }
 }
 
-#[derive(Resource)]
+#[derive(Resource, Default)]
 pub struct MazeRooms {
     all_settings: Vec<MazeRoomSettings>,
     maze_rooms: Vec<MazeRoom>
 }
 
-impl Default for MazeRooms {
-    fn default() -> Self {
-        MazeRooms {
-            all_settings: vec![],
-            maze_rooms: vec![]
-        }
-    }
-}
 
 impl MazeRooms {
     pub fn new() -> Self {
@@ -104,7 +96,7 @@ impl MazeRooms {
         let new_room = MazeRoom::new(&self.all_settings[new_setting_index], new_setting_index);
         self.maze_rooms.push(new_room);
 
-        return self.maze_rooms.len() - 1;
+        self.maze_rooms.len() - 1
     }
 
     pub fn get_material_for_floor_by_room_index(&self, room_index: usize) -> Handle<StandardMaterial> {
@@ -131,8 +123,8 @@ impl MazeRooms {
     // should move this to maze ??
     pub fn render_room(
         &mut self,
-        mut commands: &mut Commands,
-        mut meshes: &mut ResMut<Assets<Mesh>>,
+        commands: &mut Commands,
+        meshes: &mut ResMut<Assets<Mesh>>,
         floors: Entity,
         room_index: usize
     ) {
@@ -144,7 +136,7 @@ impl MazeRooms {
         // iterate over them
         cells.iter_mut().for_each(|cell| {
         // render each cell
-            cell.render_cell(&mut commands, &mut meshes, floor_material.clone(), room_assets.clone(), floors.clone());
+            cell.render_cell(commands, meshes, floor_material.clone(), room_assets.clone(), floors);
         })
     }
 }

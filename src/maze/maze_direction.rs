@@ -13,8 +13,8 @@ pub enum MazeDirection {
 
 impl MazeDirection {
     pub fn get_direction_from_index(index: u32) -> MazeDirection {
-        let direction_index = unsafe { ::std::mem::transmute(index) };
-        direction_index
+        
+        unsafe { ::std::mem::transmute(index) }
     }
 
     pub fn to_position_modifier(&self) -> Position {

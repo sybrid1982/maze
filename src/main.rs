@@ -1,7 +1,7 @@
 use bevy::{prelude::*, render::{camera::Viewport, view::RenderLayers}};
 
 use bevy_inspector_egui::quick::WorldInspectorPlugin;
-use maze::{maze_assets::MazeAssets, maze_room::MazeRooms};
+use maze::maze_assets::MazeAssets;
 use rand::SeedableRng;
 use rand_chacha::ChaCha8Rng;
 
@@ -76,7 +76,7 @@ fn generate_maze(
     mut commands: Commands, 
     mut rng: ResMut<Random>, 
     maze_assets: Res<MazeAssets>, 
-    mut materials: ResMut<'_, Assets<StandardMaterial>>,
+    materials: ResMut<'_, Assets<StandardMaterial>>,
     mut next_state: ResMut<NextState<GameState>>
 ) {
     // create a maze
@@ -93,7 +93,7 @@ fn add_lights(commands: &mut Commands<'_, '_>) {
         brightness: consts::GLOBAL_LIGHT_INTENSITY,
     });
 
-    let light_position: Vec2 = Vec2::splat(consts::MAZE_X as f32 * consts::MAZE_SCALE as f32);
+    let light_position: Vec2 = Vec2::splat(consts::MAZE_X as f32 * consts::MAZE_SCALE);
 
     // directional light
     commands.spawn(DirectionalLightBundle {

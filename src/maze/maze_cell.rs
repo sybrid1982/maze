@@ -39,7 +39,7 @@ impl MazeCell {
     }
 
     pub fn get_position(&self) -> Position {
-        self.position.clone()
+        self.position
     }
 
     pub fn add_edge(&mut self, maze_direction: &MazeDirection, edge_type: Option<EdgeType>, rand: &mut ResMut<Random>) {
@@ -59,7 +59,7 @@ impl MazeCell {
             },
         }
 
-        self.defined_edges.push(maze_direction.clone());
+        self.defined_edges.push(*maze_direction);
     }
 
     pub fn has_edge(&self, maze_direction: &MazeDirection) -> bool {
@@ -76,7 +76,7 @@ impl MazeCell {
             let new_direction = &MazeDirection::get_direction_from_index(i);
             if !self.has_edge(new_direction) {
                 if skips == 0 {
-                    return new_direction.clone();
+                    return *new_direction;
                 }
                 else 
                 {
@@ -138,7 +138,7 @@ impl MazeCell {
         for (_maze_direction, edge) in &self.edges {
             match edge {
                 Some(edge) => {
-                    let new_edge = edge.create_edge_entity(commands, &room_assets);
+                    let new_edge = edge.create_edge_entity(commands, room_assets);
                     commands
                         .entity(self.entity.expect("somehow adding edge entity to non-existant floor"))
                         .push_children(&[new_edge.expect("somehow adding edge that isn't an edge")]);
