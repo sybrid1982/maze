@@ -42,9 +42,9 @@ fn main() {
             WorldInspectorPlugin::new(),
         ))
         .insert_state(GameState::LoadingAssets)
-        .add_systems(OnEnter(GameState::LoadingAssets), (MazeAssets::load_assets, setup_rng, initialize_maze_rooms).chain().in_set(GameLoadSet))
+        .add_systems(OnEnter(GameState::LoadingAssets), (MazeAssets::load_assets, setup_rng).chain().in_set(GameLoadSet))
         .add_systems(OnEnter(GameState::Initialize), generate_maze)
-        .add_systems(OnEnter(GameState::InGame), render_maze)
+        .add_systems(OnEnter(GameState::InGame), render_game)
         .add_plugins(PlayerPlugin)
         .add_systems(Update, (move_minimap_position).run_if(in_state(GameState::InGame)))
         .add_plugins(PhysicsPlugin)
@@ -52,39 +52,36 @@ fn main() {
 }
 
 fn setup_rng(
-    mut commands: Commands
+    mut commands: Commands,
+    mut next_state: ResMut<NextState<GameState>>
 ) {
     let rng = ChaCha8Rng::from_entropy();
     commands.insert_resource(Random(rng));
+    next_state.set(GameState::Initialize);
 }
 
 // Render everything
-fn render_maze(
+fn render_game(
     mut commands: Commands,
     mut meshes: ResMut<Assets<Mesh>>,
     mut maze: ResMut<Maze>,
-    maze_rooms: Res<MazeRooms>,
 ) {
-    render_cells(&mut maze, &mut commands, &mut meshes, maze_rooms);
+    let floors = generate_empty_object_with_name(&mut commands, "floors");
+    maze.render_maze(&mut commands, &mut meshes, floors);
     add_lights(&mut commands);
     add_top_view_camera(commands);
-}
-
-fn initialize_maze_rooms(mut commands: Commands, maze_assets: Res<MazeAssets>, mut materials: ResMut<'_, Assets<StandardMaterial>>, mut next_state: ResMut<NextState<GameState>>) {
-    let maze_rooms = MazeRooms::new(maze_assets, &mut materials);
-    commands.insert_resource(maze_rooms);
-    next_state.set(GameState::Initialize);
 }
 
 fn generate_maze(
     mut commands: Commands, 
     mut rng: ResMut<Random>, 
-    mut maze_rooms: ResMut<MazeRooms>,     
+    maze_assets: Res<MazeAssets>, 
+    mut materials: ResMut<'_, Assets<StandardMaterial>>,
     mut next_state: ResMut<NextState<GameState>>
 ) {
     // create a maze
     let mut maze = Maze::new(consts::MAZE_X, consts::MAZE_Y);
-    maze.generate(&mut rng, &mut maze_rooms);
+    maze.generate(&mut rng, maze_assets, materials);
     commands.insert_resource(maze);
     next_state.set(GameState::InGame)
 }
@@ -131,20 +128,6 @@ fn add_top_view_camera(mut commands: Commands<'_, '_>) {
         RenderLayers::layer(0),
         TopDownCamera
     ));
-}
-
-fn render_cells(maze: &mut Maze, commands: &mut Commands<'_, '_>, meshes: &mut ResMut<'_, Assets<Mesh>>, maze_rooms: Res<MazeRooms>) {
-    let cells = maze.get_cells();
-
-    println!("Creating floor entity");
-    let floors = generate_empty_object_with_name(commands, "floors");
-
-    for cell in cells {
-        let floor_material = maze_rooms.get_material_for_floor_by_room_index(cell.get_room_index());
-        let room_assets = maze_rooms.get_assets_for_room_index(cell.get_room_index());
-    
-        cell.render_cell(commands, meshes, floor_material, room_assets, floors);
-    }
 }
 
 fn generate_empty_object_with_name(commands: &mut Commands<'_, '_>, name: &str) -> Entity {

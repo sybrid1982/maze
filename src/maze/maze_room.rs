@@ -5,7 +5,7 @@ use rand::Rng;
 
 use crate::random::Random;
 
-use super::maze_assets::MazeAssets;
+use super::{maze_assets::MazeAssets, maze_cell::MazeCell};
 
 #[derive(Clone)]
 pub struct MazeRoomSettings {
@@ -26,6 +26,7 @@ pub struct RoomAssets {
 pub struct MazeRoom {
     settings: MazeRoomSettings,
     settings_index: usize,
+    cells: Vec<MazeCell>
 }
 
 impl MazeRoom {
@@ -33,7 +34,12 @@ impl MazeRoom {
         MazeRoom {
             settings: settings.clone(),
             settings_index,
+            cells: vec![]
         }
+    }
+
+    pub fn get_cells(&mut self) -> &mut Vec<MazeCell> {
+        &mut self.cells
     }
 }
 
@@ -53,7 +59,11 @@ impl Default for MazeRooms {
 }
 
 impl MazeRooms {
-    pub fn new(assets: Res<MazeAssets>, materials: &mut ResMut<'_, Assets<StandardMaterial>>) -> Self {
+    pub fn new() -> Self {
+        MazeRooms::default()
+    }
+
+    pub fn initialize_maze_rooms(&mut self, assets: Res<MazeAssets>, materials: &mut ResMut<'_, Assets<StandardMaterial>>) {
         let basic_carpet = generate_material_from_image(materials, assets.carpet_1.clone());
         let second_carpet = generate_material_from_image(materials, assets.carpet_2.clone());
         let bathroom_tile = generate_material_from_image(materials, assets.bathroom_tile.clone());
@@ -72,15 +82,12 @@ impl MazeRooms {
         let mut default_room_assets_with_wall_light_2 = default_room_assets.clone();
         default_room_assets_with_wall_light_2.other_furniture.insert(String::from("wall_light"), assets.wall_light_2.clone());
 
-        MazeRooms {
-            all_settings: vec![
-                MazeRoomSettings { room_assets: default_room_assets_with_wall_light.clone(), floor: basic_carpet, name: String::from("Basic Room") },
-                MazeRoomSettings { room_assets: default_room_assets_with_wall_light_2.clone(), floor: second_carpet, name: String::from("Second Basic Room") },
-                MazeRoomSettings { room_assets: default_room_assets.clone(), floor: bathroom_tile, name: String::from("Bathroom") },
-                MazeRoomSettings { room_assets: default_room_assets.clone(), floor: kitchen_tile, name: String::from("Kitchen") },
-            ],
-            maze_rooms: vec![]
-        }
+        self.all_settings = vec![
+            MazeRoomSettings { room_assets: default_room_assets_with_wall_light.clone(), floor: basic_carpet, name: String::from("Basic Room") },
+            MazeRoomSettings { room_assets: default_room_assets_with_wall_light_2.clone(), floor: second_carpet, name: String::from("Second Basic Room") },
+            MazeRoomSettings { room_assets: default_room_assets.clone(), floor: bathroom_tile, name: String::from("Bathroom") },
+            MazeRoomSettings { room_assets: default_room_assets.clone(), floor: kitchen_tile, name: String::from("Kitchen") },
+        ];
     }
 
     pub fn create_room_and_return_index(&mut self, index_to_exclude: usize, rng: &mut ResMut<Random>) -> usize {
@@ -111,6 +118,34 @@ impl MazeRooms {
 
     pub fn get_assets_for_room_index(&self, room_index: usize) -> RoomAssets {
         self.maze_rooms[room_index].settings.room_assets.clone()
+    }
+
+    pub fn get_room(&mut self, room_index: usize) -> &mut MazeRoom {
+        &mut self.maze_rooms[room_index]
+    }
+    
+    pub fn get_room_count(&self) -> usize {
+        self.maze_rooms.len()
+    }
+
+    // should move this to maze ??
+    pub fn render_room(
+        &mut self,
+        mut commands: &mut Commands,
+        mut meshes: &mut ResMut<Assets<Mesh>>,
+        floors: Entity,
+        room_index: usize
+    ) {
+        // get necessary parts
+        let floor_material = self.get_material_for_floor_by_room_index(room_index).clone();
+        let room_assets = self.get_assets_for_room_index(room_index).clone();
+        // get the cells for the room
+        let cells = self.get_room(room_index).get_cells();
+        // iterate over them
+        cells.iter_mut().for_each(|cell| {
+        // render each cell
+            cell.render_cell(&mut commands, &mut meshes, floor_material.clone(), room_assets.clone(), floors.clone());
+        })
     }
 }
 
