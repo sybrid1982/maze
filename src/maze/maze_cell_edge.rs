@@ -1,4 +1,4 @@
-use bevy::prelude::*;
+use bevy::{ecs::observer::TriggerTargets, prelude::*};
 use rand::Rng;
 
 use super::{maze_direction::MazeDirection, maze_door::MazeDoor, maze_room::RoomAssets, paintings::Painting};
@@ -9,7 +9,8 @@ use crate::{consts, physics::collider::Collider, random::Random};
 pub enum EdgeType {
     #[default]
     Wall,
-    Doorway
+    Doorway,
+    InverseDoorway
 }
 
 #[derive(Clone)]
@@ -17,7 +18,8 @@ pub struct MazeCellEdge {
     maze_direction: MazeDirection,
     edge_type: EdgeType,
     painting: Option<Painting>,
-    wall_furniture: Vec<String>
+    wall_furniture: Vec<String>,
+    door: Option<Entity>
 }
 
 #[derive(Component, Debug, Deref, DerefMut)]
@@ -25,10 +27,10 @@ pub struct WallPosition(pub MazeDirection);
 
 impl MazeCellEdge {
     pub fn new(maze_direction: &MazeDirection, edge_type: EdgeType) -> MazeCellEdge {
-        MazeCellEdge { maze_direction: *maze_direction, edge_type, painting: None, wall_furniture: vec![] }
+        MazeCellEdge { maze_direction: *maze_direction, edge_type, painting: None, wall_furniture: vec![], door: None }
     }
 
-    fn get_edge_type(&self) -> EdgeType {
+    pub fn get_edge_type(&self) -> EdgeType {
         self.edge_type
     }
 
@@ -46,8 +48,12 @@ impl MazeCellEdge {
         }
     }
 
+    pub fn is_door(&self) -> bool {
+        self.edge_type == EdgeType::Doorway
+    }
+
     pub fn create_edge_entity(
-        &self,
+        &mut self,
         commands: &mut Commands<'_, '_>,
         room_assets: &RoomAssets,
     ) -> Option<Entity> {
@@ -115,13 +121,18 @@ impl MazeCellEdge {
                 Name::new(format!("Door {:#?}", self.get_maze_direction()))
             )).id();
 
-            let door = MazeDoor::new(commands, room_assets.door.clone(), self.get_maze_direction()).get_door_child();
-
+            let maze_door = MazeDoor::new(commands, room_assets.door.clone(), self.get_maze_direction());
+            let door = maze_door.get_door_child();
+            commands.entity(door).insert(maze_door);
             commands.entity(doorway).push_children(&[door]);
-
+            self.door = Some(door);
             return Some(doorway);
         } else {
             return None;
         }
+    }
+
+    pub fn get_door(&self) -> Option<Entity> {
+        self.door
     }
 }

@@ -1,13 +1,14 @@
 use bevy::{prelude::*, render::{camera::Viewport, view::RenderLayers}};
 
 use bevy_inspector_egui::quick::WorldInspectorPlugin;
-use maze::maze_assets::MazeAssets;
+use maze::{maze_assets::MazeAssets, maze_door::{door_open_system, MazeDoor}};
+use position::Position;
 use rand::SeedableRng;
 use rand_chacha::ChaCha8Rng;
 
 use crate::maze::maze::Maze;
 
-use player::player::{LogicalPlayer, PlayerPlugin};
+use player::{player::{LogicalPlayer, PlayerPlugin}, player_events::PlayerCellChangeEvent};
 use random::Random;
 use game_states::GameState;
 use physics::physics::PhysicsPlugin;
@@ -45,8 +46,10 @@ fn main() {
         .add_systems(OnEnter(GameState::LoadingAssets), (MazeAssets::load_assets, setup_rng).chain().in_set(GameLoadSet))
         .add_systems(OnEnter(GameState::Initialize), generate_maze)
         .add_systems(OnEnter(GameState::InGame), render_game)
+        .add_event::<PlayerCellChangeEvent>()
         .add_plugins(PlayerPlugin)
         .add_systems(Update, (move_minimap_position).run_if(in_state(GameState::InGame)))
+        .add_systems(Update, (on_player_cell_change, door_open_system))
         .add_plugins(PhysicsPlugin)
         .run();
 }
@@ -148,4 +151,20 @@ fn move_minimap_position(
     let player_transform = player_query.single();
 
     camera_transform.translation = Vec3::new(player_transform.translation.x, consts::TOP_DOWN_CAMERA_HEIGHT, player_transform.translation.z);
+}
+
+fn on_player_cell_change(
+    mut event: EventReader<PlayerCellChangeEvent>,
+    mut door_query: Query<(&GlobalTransform, &mut MazeDoor)>,
+) {
+    for _e in event.read() {
+        for (door_transform, mut maze_door) in door_query.iter_mut() {
+            let door_position = Position::get_from_transform(&door_transform.compute_transform(), consts::MAZE_SCALE);
+            if _e.0 == door_position {
+                maze_door.open_door(true);
+            } else if _e.0 == &door_position + maze_door.get_maze_direction().to_position_modifier() {
+                maze_door.open_door(false);
+            }
+        }
+    }
 }

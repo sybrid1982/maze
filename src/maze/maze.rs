@@ -16,7 +16,7 @@ use super::maze_room::MazeRooms;
 pub struct Maze {
     pub size_x: i32,
     pub size_y: i32,
-    cells: Vec<MazeCell>,
+    // cells: Vec<MazeCell>,
     maze_rooms: MazeRooms
 }
 
@@ -25,7 +25,7 @@ impl Maze {
         Maze {
             size_x: x,
             size_y: y,
-            cells: vec![],
+            // cells: vec![],
             maze_rooms: MazeRooms::new()
         }
     }
@@ -34,7 +34,6 @@ impl Maze {
         // probably need to check if cells exists, and if it does, wipe it
         
         // will this do it?
-        self.cells.clear();
         self.initialize_maze_rooms(maze_assets, materials);
 
         let mut active_positions: Vec<Position> = vec![];
@@ -72,8 +71,8 @@ impl Maze {
                 if self.contains_position(&new_position) {
                     match self.get_cell(&new_position) {
                         Some(entered_cell) => {
-                            if current_cell.get_room_index() == entered_cell.get_room_index() {
-                                self.expand_room(active_positions, position, new_position, rand);
+                            if self.maze_rooms.get_settings_index_from_room_index(current_cell.get_room_index()) == self.maze_rooms.get_settings_index_from_room_index(entered_cell.get_room_index()) {
+                                self.expand_room(active_positions, position, new_position, self.maze_rooms.get_settings_index_from_room_index(current_cell.get_room_index()), self.maze_rooms.get_settings_index_from_room_index(entered_cell.get_room_index()), rand);
                             } else {
                                 self.add_wall_to_position(active_positions, position, new_position, rand);
                             }
@@ -92,9 +91,15 @@ impl Maze {
         }
     }
 
-    fn expand_room(&mut self, active_positions: &mut Vec<Position>, position: Position, new_position: Position, rand: &mut ResMut<'_, Random>) {
-        active_positions.push(position);
-        self.add_passage(&position, &new_position, rand);
+    fn expand_room(&mut self, active_positions: &mut Vec<Position>, position: Position, new_position: Position, room_index: usize, new_room_index: usize, rand: &mut ResMut<'_, Random>) {
+        if room_index == new_room_index {
+            active_positions.push(position);
+            self.add_passage(&position, &new_position, rand);    
+        } else {
+            println!("merging two rooms");
+            self.maze_rooms.merge_rooms(room_index, new_room_index);
+            self.add_passage(&position, &new_position, rand);
+        }
     }
     
     fn generate_passage_to_new_cell(&mut self, active_positions: &mut Vec<Position>, position: Position, new_position: Position, rand: &mut ResMut<'_, Random>) {
@@ -120,7 +125,7 @@ impl Maze {
     pub fn add_cell(&mut self, position: &Position, room_index: usize) {
         let mut cell = MazeCell::new(position.x, position.y, room_index);
         cell.toggle_render();
-        self.cells.push(cell);
+        self.maze_rooms.add_cell_to_room(cell, room_index);
     }
 
     pub fn add_wall(&mut self, prev_position: &Position, curr_position: &Position, rand: &mut ResMut<Random>) {
@@ -133,6 +138,14 @@ impl Maze {
         if let Some(cell) = cell_entering {
             cell.add_edge(&maze_direction.get_opposite_direction(), Some(EdgeType::Wall), rand);
         }
+    }
+
+    pub fn get_cell(&self, position: &Position) -> Option<&MazeCell> {
+        self.maze_rooms.get_cell(&position)
+    }
+
+    fn get_cell_mut(&mut self, position: &Position) -> Option<&mut MazeCell> {
+        self.maze_rooms.get_cell_mut(&position)
     }
 
     fn add_passage(&mut self, prev_position: &Position, curr_position: &Position, rand: &mut ResMut<Random>) {
@@ -173,7 +186,7 @@ impl Maze {
         let cell_entering = self.get_cell_mut(curr_position);
         match cell_entering {
             Some(cell) => {
-                cell.add_edge(&maze_direction.get_opposite_direction(), Some(EdgeType::Doorway), rand);
+                cell.add_edge(&maze_direction.get_opposite_direction(), Some(EdgeType::InverseDoorway), rand);
             },
             None => {
                 println!("No cell at position {}", format!("{:#?}", prev_position));
@@ -190,18 +203,6 @@ impl Maze {
         for index in 0..self.maze_rooms.get_room_count() {
             self.maze_rooms.render_room(commands, assets, floors, index);
         }
-    }
-
-    pub fn get_cells(&mut self) -> &mut Vec<MazeCell> {
-        &mut self.cells
-    }
-
-    pub fn get_cell_mut(&mut self, position: &Position) -> Option<&mut MazeCell> {
-        self.cells.iter_mut().find(|cell| cell.get_position() == *position)
-    }
-
-    pub fn get_cell(&self, position: &Position) -> Option<&MazeCell> {
-        self.cells.iter().find(|cell| cell.get_position() == *position)
     }
     
     fn contains_position(&self, position: &Position) -> bool {

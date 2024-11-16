@@ -65,7 +65,7 @@ impl Position {
         Vec2::new(self.x, self.y)
     }
 
-    pub fn get_from_transform(transform: &Transform) -> Self {
-        Position { x: transform.translation.x.floor(), y: transform.translation.z.floor() }
+    pub fn get_from_transform(transform: &Transform, scale: f32) -> Self {
+        Position { x: (transform.translation.x / scale).round(), y: (transform.translation.z / scale).round() }
     }
 }

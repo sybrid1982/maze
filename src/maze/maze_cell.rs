@@ -4,9 +4,9 @@ use std::f32::consts::*;
 use bevy::{prelude::*, render::view::RenderLayers};
 use rand::Rng;
 
-use crate::{consts, position::{MazePosition, Position}, random::Random};
+use crate::{consts, player::{player::LogicalPlayer, player_events::PlayerCellChangeEvent}, position::{MazePosition, Position}, random::Random};
 
-use super::{maze_cell_edge::{EdgeType, MazeCellEdge}, maze_direction::MazeDirection, maze_room::RoomAssets};
+use super::{maze_cell_edge::{EdgeType, MazeCellEdge}, maze_direction::MazeDirection, maze_door::MazeDoor, maze_room::RoomAssets};
 
 #[derive(Component, Clone)]
 pub struct MazeCell {
@@ -41,6 +41,28 @@ impl MazeCell {
     pub fn get_position(&self) -> Position {
         self.position
     }
+
+    pub fn set_room_index(&mut self, room_index: usize) {
+        self.room_index = room_index;
+    }
+
+    // pub fn hide_cell(&self, &mut commands: &mut Commands) {
+    //     commands.entity(self.entity.unwrap()).
+    // }
+
+    // pub fn get_doors(&mut self) -> Vec<MazeDoor> {
+    //     let mut doors = vec![];
+    //     for (key, value) in self.edges {
+    //         match value {
+    //             Some(edge) => {
+    //                 if edge.is_door() {
+    //                     doors.push(edge)
+    //                 }
+    //             }
+    //             None => todo!(),
+    //         }
+    //     }
+    // }
 
     pub fn add_edge(&mut self, maze_direction: &MazeDirection, edge_type: Option<EdgeType>, rand: &mut ResMut<Random>) {
         if self.has_edge(maze_direction) {
@@ -131,17 +153,19 @@ impl MazeCell {
 }
     
     fn render_walls(
-        &self,
+        &mut self,
         commands: &mut Commands<'_, '_>,
         room_assets: &RoomAssets) {
     
-        for (_maze_direction, edge) in &self.edges {
+        for (_maze_direction, edge) in &mut self.edges {
             match edge {
                 Some(edge) => {
-                    let new_edge = edge.create_edge_entity(commands, room_assets);
-                    commands
-                        .entity(self.entity.expect("somehow adding edge entity to non-existant floor"))
-                        .push_children(&[new_edge.expect("somehow adding edge that isn't an edge")]);
+                    if edge.get_edge_type() == EdgeType::Doorway || edge.get_edge_type() == EdgeType::Wall {
+                        let new_edge = edge.create_edge_entity(commands, room_assets);
+                        commands
+                            .entity(self.entity.expect("somehow adding edge entity to non-existant floor"))
+                            .push_children(&[new_edge.expect("somehow adding edge that isn't an edge")]);
+                    }
                 }
                 None => {},
             }
@@ -151,4 +175,9 @@ impl MazeCell {
     pub fn get_room_index(&self) -> usize {
         self.room_index
     }
+
+    pub fn get_entity(&self) -> Entity {
+        self.entity.expect("trying to get entity for maze cell that never generated one")
+    }
 }
+

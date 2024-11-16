@@ -252,11 +252,11 @@ fn check_cell_changed(
     mut writer: EventWriter<PlayerCellChangeEvent>
 ) {
     let (mut player_position, player_transform) = player.single_mut();
-    let new_current_position = Position::get_from_transform(player_transform);
+    let new_current_position = Position::get_from_transform(player_transform, consts::MAZE_SCALE);
     if player_position.x != new_current_position.x || player_position.y != new_current_position.y {
         player_position.x = new_current_position.x;
         player_position.y = new_current_position.y;
         // fire event that the position has changed
-        writer.send(PlayerCellChangeEvent);
+        writer.send(PlayerCellChangeEvent(new_current_position));
     }
 }

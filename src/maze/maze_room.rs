@@ -3,7 +3,7 @@ use std::collections::HashMap;
 use bevy::prelude::*;
 use rand::Rng;
 
-use crate::random::Random;
+use crate::{position::Position, random::Random};
 
 use super::{maze_assets::MazeAssets, maze_cell::MazeCell};
 
@@ -115,9 +115,50 @@ impl MazeRooms {
     pub fn get_room(&mut self, room_index: usize) -> &mut MazeRoom {
         &mut self.maze_rooms[room_index]
     }
+
+    fn empty_cells_from_room(&mut self, room_index: usize) -> Vec<MazeCell> {
+        let mut emptied_cells: Vec<MazeCell> = vec![];
+        emptied_cells.append(&mut self.maze_rooms[room_index].cells);
+
+        emptied_cells
+    }
     
     pub fn get_room_count(&self) -> usize {
         self.maze_rooms.len()
+    }
+
+    pub fn add_cell_to_room(&mut self, cell: MazeCell, room_index: usize) {
+        self.maze_rooms[room_index].cells.push(cell);
+    }
+
+    pub fn merge_rooms(&mut self, room_to_keep: usize, room_to_merge: usize) {
+        let mut cells = self.empty_cells_from_room(room_to_merge);
+        let kept_room = &mut self.get_room(room_to_keep).cells;
+        kept_room.append(&mut cells);
+    }
+
+    pub fn get_cell_mut(&mut self, position: &Position) -> Option<&mut MazeCell> {
+        let mut cell: Option<&mut MazeCell> = None;
+        for room in self.maze_rooms.iter_mut() {
+            let possible_cell = room.cells.iter_mut().find(|cell| cell.get_position() == *position);
+            if possible_cell.is_some() {
+                cell = possible_cell;
+                break;
+            }
+        }
+        cell
+    }
+
+    pub fn get_cell(&self, position: &Position) -> Option<&MazeCell> {
+        let mut cell: Option<&MazeCell> = None;
+        for room in self.maze_rooms.iter() {
+            let possible_cell = room.cells.iter().find(|cell| cell.get_position() == *position);
+            if possible_cell.is_some() {
+                cell = possible_cell;
+                break;
+            }
+        }
+        cell
     }
 
     // should move this to maze ??
