@@ -13,6 +13,7 @@ use crate::physics::collider::Collider;
  * new(position: Position) -> Spawns a door at a position with the door closed, returns a new MazeDoor
  * get_door_render(??) -> gives instructions to build the 3D objects/entities that make up a maze door, maybe returns an Entity or a Bundle? 
  * open_door(swing_forward: boolean) -> opens the door.  If swing_forward is true, then we rotate the y axis 90 positive, if false then 90 negative
+ * is_door_open() -> boolean to let later logic know if the door should be treated as passable or impassable
  */
 
 #[derive(PartialEq)]
@@ -30,9 +31,6 @@ pub struct MazeDoor {
     maze_direction: MazeDirection,
     state: DoorState,
 }
-
-#[derive(Component)]
-pub struct DoorChild;
 
 impl MazeDoor {
     pub fn new(        
@@ -83,6 +81,10 @@ impl MazeDoor {
 
     pub fn get_maze_direction(&self) -> &MazeDirection {
         &self.maze_direction
+    }
+
+    pub fn is_door_open(&self) -> bool {
+        self.state == DoorState::Open
     }
 }
 

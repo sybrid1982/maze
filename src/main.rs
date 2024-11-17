@@ -23,6 +23,7 @@ mod game_states;
 mod apply_render_layers_to_children;
 mod assets;
 mod monster;
+mod character;
 
 #[derive(Component)]
 struct TopDownCamera;

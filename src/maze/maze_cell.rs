@@ -179,5 +179,9 @@ impl MazeCell {
     pub fn get_entity(&self) -> Entity {
         self.entity.expect("trying to get entity for maze cell that never generated one")
     }
+
+    pub fn get_edge(&mut self, maze_direction: &MazeDirection) -> &mut Option<MazeCellEdge> {
+        self.edges.get_mut(maze_direction).expect("Trying to get maze edge that was not yet defined?")
+    }
 }
 

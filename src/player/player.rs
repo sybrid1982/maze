@@ -6,6 +6,7 @@ use bevy::input::mouse::MouseMotion;
 use bevy::prelude::*;
 use bevy::render::view::RenderLayers;
 
+use crate::character::character::{CharacterBundle, Speed};
 use crate::game_states::GameState;
 use crate::physics::velocity;
 use crate::position::Position;
@@ -21,9 +22,6 @@ pub struct PlayerPlugin;
 
 #[derive(Debug, Component)]
 pub struct WorldModelCamera;
-
-#[derive(Component, Deref, DerefMut)]
-struct Speed(f32);
 
 #[derive(Component)]
 pub struct LogicalPlayer;
@@ -117,12 +115,14 @@ fn setup (
             ..default()
         },
         LogicalPlayer,
-        Speed(consts::PLAYER_SPEED),
+        CharacterBundle {
+            speed: Speed(consts::PLAYER_SPEED),
+            velocity: Velocity::new(0.0, 0.0),
+            position: Position{x: PLAYER_START_POSITION.x, y: PLAYER_START_POSITION.y}
+        },
         Name::new("Player"),
-        Velocity::new(0.0, 0.0),
         Controller::default(),
         ControllerInput::default(),
-        Position{x: PLAYER_START_POSITION.x, y: PLAYER_START_POSITION.y}
     );
 
     let light = (
