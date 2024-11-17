@@ -8,7 +8,7 @@ use rand_chacha::ChaCha8Rng;
 
 use crate::maze::maze::Maze;
 
-use player::{player::{LogicalPlayer, PlayerPlugin}, player_events::PlayerCellChangeEvent};
+use player::{player::{LogicalPlayer, PlayerPlugin, WorldModelCamera}, player_events::PlayerCellChangeEvent};
 use random::Random;
 use game_states::GameState;
 use physics::physics::PhysicsPlugin;
@@ -22,6 +22,7 @@ mod physics;
 mod game_states;
 mod apply_render_layers_to_children;
 mod assets;
+mod monster;
 
 #[derive(Component)]
 struct TopDownCamera;
@@ -49,7 +50,8 @@ fn main() {
         .add_event::<PlayerCellChangeEvent>()
         .add_plugins(PlayerPlugin)
         .add_systems(Update, (move_minimap_position).run_if(in_state(GameState::InGame)))
-        .add_systems(Update, (on_player_cell_change, door_open_system))
+        .add_systems(Update, (on_player_cell_change_door_check, door_open_system))
+        .add_systems(Update, on_player_cell_change_win_check)
         .add_plugins(PhysicsPlugin)
         .run();
 }
@@ -115,7 +117,8 @@ fn add_top_view_camera(mut commands: Commands<'_, '_>) {
     let mut camera_transform = Transform::from_xyz(0., consts::TOP_DOWN_CAMERA_HEIGHT, 0.).looking_at(Vec3::new(0., 0.0, 0.), Vec3::Y);
     camera_transform.rotate_y(-std::f32::consts::FRAC_PI_2);
 
-    commands.spawn((Camera3dBundle {
+    commands.spawn((
+        Camera3dBundle {
             transform: camera_transform,
             camera: Camera {
                 order: 1,
@@ -153,18 +156,44 @@ fn move_minimap_position(
     camera_transform.translation = Vec3::new(player_transform.translation.x, consts::TOP_DOWN_CAMERA_HEIGHT, player_transform.translation.z);
 }
 
-fn on_player_cell_change(
+fn on_player_cell_change_door_check(
     mut event: EventReader<PlayerCellChangeEvent>,
     mut door_query: Query<(&GlobalTransform, &mut MazeDoor)>,
 ) {
-    for _e in event.read() {
+    for e in event.read() {
+        let player_position = e.0;
         for (door_transform, mut maze_door) in door_query.iter_mut() {
             let door_position = Position::get_from_transform(&door_transform.compute_transform(), consts::MAZE_SCALE);
-            if _e.0 == door_position {
+            if player_position == door_position {
                 maze_door.open_door(true);
-            } else if _e.0 == &door_position + maze_door.get_maze_direction().to_position_modifier() {
+            } else if player_position == &door_position + maze_door.get_maze_direction().to_position_modifier() {
                 maze_door.open_door(false);
             }
+        }
+    }
+}
+
+fn on_player_cell_change_win_check(
+    mut commands: Commands<'_, '_>,
+    mut event: EventReader<PlayerCellChangeEvent>,
+    main_camera_query: Query<Entity, With<WorldModelCamera>>
+) {
+    let winning_cell = Position::new((consts::MAZE_X - 1) as f32, (consts::MAZE_Y - 1) as f32);
+    for e in event.read() {
+        let player_position = e.0;
+        if player_position == winning_cell {
+            let player_camera = main_camera_query.single();
+            // player wins
+            commands.spawn((
+                TextBundle::from("You win!").with_style(
+                    Style {
+                        position_type: PositionType::Absolute,
+                        align_self: AlignSelf::Center,
+                        justify_self: JustifySelf::Center,
+                        ..default()
+                    }),
+                TargetCamera(player_camera)
+            ));
         }
     }
 }

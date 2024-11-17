@@ -20,7 +20,7 @@ const PLAYER_START_POSITION: Position = Position { x: 0., y: 0. };
 pub struct PlayerPlugin;
 
 #[derive(Debug, Component)]
-struct WorldModelCamera;
+pub struct WorldModelCamera;
 
 #[derive(Component, Deref, DerefMut)]
 struct Speed(f32);
