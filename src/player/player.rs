@@ -6,9 +6,13 @@ use bevy::input::mouse::MouseMotion;
 use bevy::prelude::*;
 use bevy::render::view::RenderLayers;
 
-use super::position::Position;
-use super::consts;
+use crate::game_states::GameState;
+use crate::physics::velocity;
+use crate::position::Position;
+use crate::consts;
 use crate::physics::velocity::Velocity;
+
+use super::player_events::PlayerCellChangeEvent;
 
 const ANGLE_EPSILON: f32 = 0.001953125;
 const PLAYER_START_POSITION: Position = Position { x: 0., y: 0. };
@@ -84,6 +88,7 @@ impl Plugin for PlayerPlugin {
 
         app.add_systems(Startup, setup);
         app.add_systems(PreUpdate, (controller_input, controller_look, controller_move, controller_render).chain().after(mouse::mouse_button_input_system).after(keyboard::keyboard_input_system));
+        app.add_systems(Update, (check_cell_changed).after(velocity::apply_velocity).run_if(in_state(GameState::InGame)));
     }
 }
 
@@ -108,7 +113,7 @@ fn setup (
         PbrBundle {
             mesh: meshes.add(Cuboid::new(consts::PLAYER_LENGTH, consts::PLAYER_HEIGHT, consts::PLAYER_WIDTH)),
             material: materials.add(Color::srgb(0.7,0.1,0.2)),
-            transform: Transform::from_xyz(PLAYER_START_POSITION.x, consts::MAZE_SCALE as f32 / 2., PLAYER_START_POSITION.y),
+            transform: Transform::from_xyz(PLAYER_START_POSITION.x, consts::MAZE_SCALE / 2., PLAYER_START_POSITION.y),
             ..default()
         },
         LogicalPlayer,
@@ -117,6 +122,7 @@ fn setup (
         Velocity::new(0.0, 0.0),
         Controller::default(),
         ControllerInput::default(),
+        Position{x: PLAYER_START_POSITION.x, y: PLAYER_START_POSITION.y}
     );
 
     let light = (
@@ -206,10 +212,10 @@ pub fn controller_look(mut query: Query<(&mut Controller, &ControllerInput)>) {
 pub fn controller_move(
     mut query: Query<(
         &ControllerInput,
-        &mut Controller,
+        &Controller,
         &mut Velocity,
     )>) {
-        for (input, mut controller, mut velocity) in
+        for (input, controller, mut velocity) in
         query.iter_mut()
     {
         let mut move_to_world = Mat3::from_axis_angle(Vec3::Y, input.yaw);
@@ -219,7 +225,7 @@ pub fn controller_move(
             move_direction /= move_direction.length()
         }
 
-        velocity.set_velocity(Vec2::new((move_direction.x * controller.speed), (move_direction.z * controller.speed)));
+        velocity.set_velocity(Vec2::new(move_direction.x * controller.speed, move_direction.z * controller.speed));
     }
 }
 
@@ -238,5 +244,19 @@ pub fn controller_render(
             render_transform.translation = logical_transform.translation + camera_offset;
             render_transform.rotation = Quat::from_euler(EulerRot::YXZ, controller.yaw, controller.pitch, 0.0);
         }
+    }
+}
+
+fn check_cell_changed(
+    mut player: Query<(&mut Position, &Transform), With<LogicalPlayer>>,
+    mut writer: EventWriter<PlayerCellChangeEvent>
+) {
+    let (mut player_position, player_transform) = player.single_mut();
+    let new_current_position = Position::get_from_transform(player_transform, consts::MAZE_SCALE);
+    if player_position.x != new_current_position.x || player_position.y != new_current_position.y {
+        player_position.x = new_current_position.x;
+        player_position.y = new_current_position.y;
+        // fire event that the position has changed
+        writer.send(PlayerCellChangeEvent(new_current_position));
     }
 }

@@ -1,11 +1,12 @@
 use std::collections::HashMap;
+use std::f32::consts::*;
 
 use bevy::{prelude::*, render::view::RenderLayers};
 use rand::Rng;
 
-use crate::{consts, position::{MazePosition, Position}, random::Random};
+use crate::{consts, player::{player::LogicalPlayer, player_events::PlayerCellChangeEvent}, position::{MazePosition, Position}, random::Random};
 
-use super::{maze_cell_edge::{EdgeType, MazeCellEdge}, maze_direction::MazeDirection, maze_room::RoomAssets};
+use super::{maze_cell_edge::{EdgeType, MazeCellEdge}, maze_direction::MazeDirection, maze_door::MazeDoor, maze_room::RoomAssets};
 
 #[derive(Component, Clone)]
 pub struct MazeCell {
@@ -38,25 +39,49 @@ impl MazeCell {
     }
 
     pub fn get_position(&self) -> Position {
-        self.position.clone()
+        self.position
     }
 
-    pub fn add_edge(&mut self, maze_direction: &MazeDirection, edge_type: Option<EdgeType>) {
+    pub fn set_room_index(&mut self, room_index: usize) {
+        self.room_index = room_index;
+    }
+
+    // pub fn hide_cell(&self, &mut commands: &mut Commands) {
+    //     commands.entity(self.entity.unwrap()).
+    // }
+
+    // pub fn get_doors(&mut self) -> Vec<MazeDoor> {
+    //     let mut doors = vec![];
+    //     for (key, value) in self.edges {
+    //         match value {
+    //             Some(edge) => {
+    //                 if edge.is_door() {
+    //                     doors.push(edge)
+    //                 }
+    //             }
+    //             None => todo!(),
+    //         }
+    //     }
+    // }
+
+    pub fn add_edge(&mut self, maze_direction: &MazeDirection, edge_type: Option<EdgeType>, rand: &mut ResMut<Random>) {
         if self.has_edge(maze_direction) {
             panic!("Pushed same edge twice, stopping");
         }
 
         match edge_type {
             Some(edge_type) => {
-                let new_edge = Some(MazeCellEdge::new(maze_direction, edge_type));
-                self.edges.insert(*maze_direction, new_edge);
+                let mut new_edge = MazeCellEdge::new(maze_direction, edge_type);
+                new_edge.generate_furniture(rand);
+                let new_edge_option = Some(new_edge);
+                self.edges.insert(*maze_direction, new_edge_option);
             },
             None => {
                 self.edges.insert(*maze_direction, None);
             },
         }
 
-        self.defined_edges.push(maze_direction.clone());
+        self.defined_edges.push(*maze_direction);
     }
 
     pub fn has_edge(&self, maze_direction: &MazeDirection) -> bool {
@@ -73,7 +98,7 @@ impl MazeCell {
             let new_direction = &MazeDirection::get_direction_from_index(i);
             if !self.has_edge(new_direction) {
                 if skips == 0 {
-                    return new_direction.clone();
+                    return *new_direction;
                 }
                 else 
                 {
@@ -98,7 +123,7 @@ impl MazeCell {
             PbrBundle {
                 mesh: meshes.add(Rectangle::new(consts::MAZE_SCALE, consts::MAZE_SCALE)),
                 material: floor_material,
-                transform: Transform { translation, rotation: Quat::from_rotation_x(-std::f32::consts::FRAC_PI_2), ..default() },
+                transform: Transform { translation, rotation: Quat::from_rotation_x(-FRAC_PI_2), ..default() },
                 ..default()
             },
             MazePosition(self.get_position().get_as_vec2()),
@@ -112,7 +137,7 @@ impl MazeCell {
         // TODO: Make this only render for the FPS camera and not the top down camera
         let half_cell = consts::MAZE_SCALE / 2.;
         let transform = Transform::from_xyz(-half_cell, half_cell, 6.0)
-            .with_rotation(Quat::from_euler(EulerRot::XYZ, std::f32::consts::FRAC_PI_2, 0.0, 0.0 ))
+            .with_rotation(Quat::from_euler(EulerRot::XYZ, FRAC_PI_2, 0.0, 0.0 ))
             .with_scale(Vec3::splat(2.0));
         let ceiling = commands.spawn( (
             SceneBundle {
@@ -128,17 +153,19 @@ impl MazeCell {
 }
     
     fn render_walls(
-        &self,
+        &mut self,
         commands: &mut Commands<'_, '_>,
         room_assets: &RoomAssets) {
     
-        for (_maze_direction, edge) in &self.edges {
+        for (_maze_direction, edge) in &mut self.edges {
             match edge {
                 Some(edge) => {
-                    let new_edge = edge.create_edge_entity(commands, &room_assets);
-                    commands
-                        .entity(self.entity.expect("somehow adding edge entity to non-existant floor"))
-                        .push_children(&[new_edge.expect("somehow adding edge that isn't an edge")]);
+                    if edge.get_edge_type() == EdgeType::Doorway || edge.get_edge_type() == EdgeType::Wall {
+                        let new_edge = edge.create_edge_entity(commands, room_assets);
+                        commands
+                            .entity(self.entity.expect("somehow adding edge entity to non-existant floor"))
+                            .push_children(&[new_edge.expect("somehow adding edge that isn't an edge")]);
+                    }
                 }
                 None => {},
             }
@@ -148,4 +175,9 @@ impl MazeCell {
     pub fn get_room_index(&self) -> usize {
         self.room_index
     }
+
+    pub fn get_entity(&self) -> Entity {
+        self.entity.expect("trying to get entity for maze cell that never generated one")
+    }
 }
+

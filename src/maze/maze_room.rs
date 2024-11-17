@@ -3,9 +3,9 @@ use std::collections::HashMap;
 use bevy::prelude::*;
 use rand::Rng;
 
-use crate::random::Random;
+use crate::{position::Position, random::Random};
 
-use super::maze_assets::MazeAssets;
+use super::{maze_assets::MazeAssets, maze_cell::MazeCell};
 
 #[derive(Clone)]
 pub struct MazeRoomSettings {
@@ -26,6 +26,7 @@ pub struct RoomAssets {
 pub struct MazeRoom {
     settings: MazeRoomSettings,
     settings_index: usize,
+    cells: Vec<MazeCell>
 }
 
 impl MazeRoom {
@@ -33,27 +34,28 @@ impl MazeRoom {
         MazeRoom {
             settings: settings.clone(),
             settings_index,
+            cells: vec![]
         }
+    }
+
+    pub fn get_cells(&mut self) -> &mut Vec<MazeCell> {
+        &mut self.cells
     }
 }
 
-#[derive(Resource)]
+#[derive(Resource, Default)]
 pub struct MazeRooms {
     all_settings: Vec<MazeRoomSettings>,
     maze_rooms: Vec<MazeRoom>
 }
 
-impl Default for MazeRooms {
-    fn default() -> Self {
-        MazeRooms {
-            all_settings: vec![],
-            maze_rooms: vec![]
-        }
-    }
-}
 
 impl MazeRooms {
-    pub fn new(assets: Res<MazeAssets>, materials: &mut ResMut<'_, Assets<StandardMaterial>>) -> Self {
+    pub fn new() -> Self {
+        MazeRooms::default()
+    }
+
+    pub fn initialize_maze_rooms(&mut self, assets: Res<MazeAssets>, materials: &mut ResMut<'_, Assets<StandardMaterial>>) {
         let basic_carpet = generate_material_from_image(materials, assets.carpet_1.clone());
         let second_carpet = generate_material_from_image(materials, assets.carpet_2.clone());
         let bathroom_tile = generate_material_from_image(materials, assets.bathroom_tile.clone());
@@ -72,15 +74,12 @@ impl MazeRooms {
         let mut default_room_assets_with_wall_light_2 = default_room_assets.clone();
         default_room_assets_with_wall_light_2.other_furniture.insert(String::from("wall_light"), assets.wall_light_2.clone());
 
-        MazeRooms {
-            all_settings: vec![
-                MazeRoomSettings { room_assets: default_room_assets_with_wall_light.clone(), floor: basic_carpet, name: String::from("Basic Room") },
-                MazeRoomSettings { room_assets: default_room_assets_with_wall_light_2.clone(), floor: second_carpet, name: String::from("Second Basic Room") },
-                MazeRoomSettings { room_assets: default_room_assets.clone(), floor: bathroom_tile, name: String::from("Bathroom") },
-                MazeRoomSettings { room_assets: default_room_assets.clone(), floor: kitchen_tile, name: String::from("Kitchen") },
-            ],
-            maze_rooms: vec![]
-        }
+        self.all_settings = vec![
+            MazeRoomSettings { room_assets: default_room_assets_with_wall_light.clone(), floor: basic_carpet, name: String::from("Basic Room") },
+            MazeRoomSettings { room_assets: default_room_assets_with_wall_light_2.clone(), floor: second_carpet, name: String::from("Second Basic Room") },
+            MazeRoomSettings { room_assets: default_room_assets.clone(), floor: bathroom_tile, name: String::from("Bathroom") },
+            MazeRoomSettings { room_assets: default_room_assets.clone(), floor: kitchen_tile, name: String::from("Kitchen") },
+        ];
     }
 
     pub fn create_room_and_return_index(&mut self, index_to_exclude: usize, rng: &mut ResMut<Random>) -> usize {
@@ -97,7 +96,7 @@ impl MazeRooms {
         let new_room = MazeRoom::new(&self.all_settings[new_setting_index], new_setting_index);
         self.maze_rooms.push(new_room);
 
-        return self.maze_rooms.len() - 1;
+        self.maze_rooms.len() - 1
     }
 
     pub fn get_material_for_floor_by_room_index(&self, room_index: usize) -> Handle<StandardMaterial> {
@@ -111,6 +110,75 @@ impl MazeRooms {
 
     pub fn get_assets_for_room_index(&self, room_index: usize) -> RoomAssets {
         self.maze_rooms[room_index].settings.room_assets.clone()
+    }
+
+    pub fn get_room(&mut self, room_index: usize) -> &mut MazeRoom {
+        &mut self.maze_rooms[room_index]
+    }
+
+    fn empty_cells_from_room(&mut self, room_index: usize) -> Vec<MazeCell> {
+        let mut emptied_cells: Vec<MazeCell> = vec![];
+        emptied_cells.append(&mut self.maze_rooms[room_index].cells);
+
+        emptied_cells
+    }
+    
+    pub fn get_room_count(&self) -> usize {
+        self.maze_rooms.len()
+    }
+
+    pub fn add_cell_to_room(&mut self, cell: MazeCell, room_index: usize) {
+        self.maze_rooms[room_index].cells.push(cell);
+    }
+
+    pub fn merge_rooms(&mut self, room_to_keep: usize, room_to_merge: usize) {
+        let mut cells = self.empty_cells_from_room(room_to_merge);
+        let kept_room = &mut self.get_room(room_to_keep).cells;
+        kept_room.append(&mut cells);
+    }
+
+    pub fn get_cell_mut(&mut self, position: &Position) -> Option<&mut MazeCell> {
+        let mut cell: Option<&mut MazeCell> = None;
+        for room in self.maze_rooms.iter_mut() {
+            let possible_cell = room.cells.iter_mut().find(|cell| cell.get_position() == *position);
+            if possible_cell.is_some() {
+                cell = possible_cell;
+                break;
+            }
+        }
+        cell
+    }
+
+    pub fn get_cell(&self, position: &Position) -> Option<&MazeCell> {
+        let mut cell: Option<&MazeCell> = None;
+        for room in self.maze_rooms.iter() {
+            let possible_cell = room.cells.iter().find(|cell| cell.get_position() == *position);
+            if possible_cell.is_some() {
+                cell = possible_cell;
+                break;
+            }
+        }
+        cell
+    }
+
+    // should move this to maze ??
+    pub fn render_room(
+        &mut self,
+        commands: &mut Commands,
+        meshes: &mut ResMut<Assets<Mesh>>,
+        floors: Entity,
+        room_index: usize
+    ) {
+        // get necessary parts
+        let floor_material = self.get_material_for_floor_by_room_index(room_index).clone();
+        let room_assets = self.get_assets_for_room_index(room_index).clone();
+        // get the cells for the room
+        let cells = self.get_room(room_index).get_cells();
+        // iterate over them
+        cells.iter_mut().for_each(|cell| {
+        // render each cell
+            cell.render_cell(commands, meshes, floor_material.clone(), room_assets.clone(), floors);
+        })
     }
 }
 

@@ -1,7 +1,7 @@
 use std::ops::{Add, Mul, Sub};
-use bevy::prelude::{Component, Deref, DerefMut, Vec2, Vec3};
+use bevy::prelude::*;
 
-#[derive(Default, Debug, Copy, Clone, PartialEq)]
+#[derive(Default, Debug, Copy, Clone, PartialEq, Component)]
 pub struct Position {
     pub x: f32,
     pub y: f32,
@@ -63,5 +63,9 @@ impl Position {
 
     pub fn get_as_vec2(&self) -> Vec2 {
         Vec2::new(self.x, self.y)
+    }
+
+    pub fn get_from_transform(transform: &Transform, scale: f32) -> Self {
+        Position { x: (transform.translation.x / scale).round(), y: (transform.translation.z / scale).round() }
     }
 }
