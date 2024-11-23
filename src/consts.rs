@@ -1,7 +1,7 @@
 use bevy::color::Color;
 
-pub const MAZE_X: i32 = 25;
-pub const MAZE_Y: i32 = 25;
+pub const MAZE_X: i32 = 3;
+pub const MAZE_Y: i32 = 3;
 pub const MAZE_SCALE: f32 = 5.;
 pub const WALL_THICKNESS: f32 = 0.2;
 

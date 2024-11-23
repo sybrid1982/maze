@@ -68,4 +68,8 @@ impl Position {
     pub fn get_from_transform(transform: &Transform, scale: f32) -> Self {
         Position { x: (transform.translation.x / scale).round(), y: (transform.translation.z / scale).round() }
     }
+
+    pub fn get_distance_to_position(&self, position: Position) -> usize {
+        (self.x as usize).abs_diff(position.x as usize) + (self.y as usize).abs_diff(position.y as usize)
+    }
 }

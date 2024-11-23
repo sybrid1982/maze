@@ -1,7 +1,8 @@
-use bevy::{prelude::*, render::{camera::Viewport, view::RenderLayers}};
+use bevy::{prelude::*, render::{camera::Viewport, mesh::skinning::{SkinnedMesh, SkinnedMeshInverseBindposes}, primitives::Aabb, view::RenderLayers}};
 
 use bevy_inspector_egui::quick::WorldInspectorPlugin;
 use maze::{maze_assets::MazeAssets, maze_door::{door_open_system, MazeDoor}};
+use monster::{monster::MonsterPlugin, monster_assets::MonsterAssets};
 use position::Position;
 use rand::SeedableRng;
 use rand_chacha::ChaCha8Rng;
@@ -24,6 +25,8 @@ mod apply_render_layers_to_children;
 mod assets;
 mod monster;
 mod character;
+mod grid;
+mod pathfinding_node;
 
 #[derive(Component)]
 struct TopDownCamera;
@@ -45,15 +48,16 @@ fn main() {
             WorldInspectorPlugin::new(),
         ))
         .insert_state(GameState::LoadingAssets)
-        .add_systems(OnEnter(GameState::LoadingAssets), (MazeAssets::load_assets, setup_rng).chain().in_set(GameLoadSet))
+        .add_systems(OnEnter(GameState::LoadingAssets), (MazeAssets::load_assets, MonsterAssets::load_assets, setup_rng).chain().in_set(GameLoadSet))
         .add_systems(OnEnter(GameState::Initialize), generate_maze)
         .add_systems(OnEnter(GameState::InGame), render_game)
         .add_event::<PlayerCellChangeEvent>()
         .add_plugins(PlayerPlugin)
-        .add_systems(Update, (move_minimap_position).run_if(in_state(GameState::InGame)))
+        .add_systems(Update, (move_minimap_position, recalculate_skinned_aabb).run_if(in_state(GameState::InGame)))
         .add_systems(Update, (on_player_cell_change_door_check, door_open_system))
         .add_systems(Update, on_player_cell_change_win_check)
         .add_plugins(PhysicsPlugin)
+        .add_plugins(MonsterPlugin)
         .run();
 }
 
@@ -196,5 +200,23 @@ fn on_player_cell_change_win_check(
                 TargetCamera(player_camera)
             ));
         }
+    }
+}
+
+pub fn recalculate_skinned_aabb(
+    inverse_bindposes: Res<Assets<SkinnedMeshInverseBindposes>>,
+    mut query: Query<(&Name, &SkinnedMesh, &mut Aabb), Added<Aabb>>,
+) {
+    // HACK:
+    for (name, skinned_mesh, mut aabb) in query.iter_mut() {
+        let Some(inverse_bindposes) = inverse_bindposes.get(&skinned_mesh.inverse_bindposes) else {
+            continue;
+        };
+
+        let mut inverse_bindpose = inverse_bindposes[0]; // `0` probably won't work in all cases
+
+        // multiplying by `inverse_bindpose` seems to be the standard (https://github.com/KhronosGroup/glTF-Blender-IO/issues/1887)
+        aabb.center = (inverse_bindpose * aabb.center.extend(0.0)).into();
+        aabb.half_extents = (inverse_bindpose * aabb.half_extents.extend(0.0)).into();
     }
 }

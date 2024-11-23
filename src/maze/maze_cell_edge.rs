@@ -48,8 +48,14 @@ impl MazeCellEdge {
         }
     }
 
-    pub fn is_door(&self) -> bool {
-        self.edge_type == EdgeType::Doorway
+    // Ideally we would have some way for a cell to say whether it is possible to move from one cell to another.
+    // ...or maybe this could be about room links?
+    pub fn is_passable(&self) -> bool {
+        if (self.edge_type == EdgeType::Doorway || self.edge_type == EdgeType::InverseDoorway) // && self.is_open {
+        {
+            return true;
+        }
+        false
     }
 
     pub fn create_edge_entity(
@@ -130,9 +136,5 @@ impl MazeCellEdge {
         } else {
             return None;
         }
-    }
-
-    pub fn get_door(&self) -> Option<Entity> {
-        self.door
     }
 }

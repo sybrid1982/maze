@@ -6,3 +6,4 @@ pub mod paintings;
 pub mod maze_door;
 pub mod maze_assets;
 pub mod maze_room;
+pub mod room_links;
