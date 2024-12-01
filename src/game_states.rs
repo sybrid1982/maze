@@ -7,4 +7,6 @@ pub enum GameState {
     MainMenu,
     Initialize,
     InGame,
+    Won,
+    Lost
 }

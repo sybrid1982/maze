@@ -1,6 +1,10 @@
 use std::ops::Index;
 
+use bevy::prelude::Resource;
+
 use crate::position::Position;
+
+use super::maze_direction::MazeDirection;
 
 struct RoomPosition {
     room: usize,
@@ -27,11 +31,22 @@ impl RoomLink {
     }
 }
 
+#[derive(Resource)]
 pub struct RoomLinks {
     pub room_links: Vec<RoomLink>
 }
 
 impl RoomLinks {
+    pub fn new () -> Self {
+        RoomLinks {
+            room_links: vec![]
+        }
+    }
+
+    pub fn add_link(position: Position, direction: MazeDirection) {
+        
+    }
+
     pub fn get_room_links(&self, room_number: usize) -> Vec<&RoomLink> {
         let matching_links = self.room_links.iter().filter(|room_link| room_link.has_room_number(room_number));
         matching_links.collect()

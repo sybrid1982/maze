@@ -189,6 +189,11 @@ impl MazeRooms {
             cell.render_cell(commands, meshes, floor_material.clone(), room_assets.clone(), floors);
         })
     }
+
+    pub fn get_room_number_for_position(&self, position: Position) -> usize {
+        let room_number: usize = self.maze_rooms.iter().position(|room| room.get_room_has_position(position)).expect("get_room_number_for_position: Position not in room");
+        room_number
+    }
 }
 
 fn generate_material_from_image(materials: &mut ResMut<'_, Assets<StandardMaterial>>, image: Handle<Image>) -> Handle<StandardMaterial> {

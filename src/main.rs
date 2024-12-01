@@ -1,8 +1,8 @@
-use bevy::{prelude::*, render::{camera::Viewport, mesh::skinning::{SkinnedMesh, SkinnedMeshInverseBindposes}, primitives::Aabb, view::RenderLayers}};
+use bevy::{prelude::*, reflect::TypeRegistry, render::{camera::Viewport, mesh::skinning::{SkinnedMesh, SkinnedMeshInverseBindposes}, primitives::Aabb, view::RenderLayers}};
 
 use bevy_inspector_egui::quick::WorldInspectorPlugin;
 use maze::{maze_assets::MazeAssets, maze_door::{door_open_system, MazeDoor}};
-use monster::{monster::MonsterPlugin, monster_assets::MonsterAssets};
+use monster::{monster::MonsterPlugin, monster_assets::MonsterAssets, monster_events::MonsterReachedPlayer};
 use position::Position;
 use rand::SeedableRng;
 use rand_chacha::ChaCha8Rng;
@@ -51,13 +51,13 @@ fn main() {
         .add_systems(OnEnter(GameState::LoadingAssets), (MazeAssets::load_assets, MonsterAssets::load_assets, setup_rng).chain().in_set(GameLoadSet))
         .add_systems(OnEnter(GameState::Initialize), generate_maze)
         .add_systems(OnEnter(GameState::InGame), render_game)
-        .add_event::<PlayerCellChangeEvent>()
         .add_plugins(PlayerPlugin)
         .add_systems(Update, (move_minimap_position, recalculate_skinned_aabb).run_if(in_state(GameState::InGame)))
-        .add_systems(Update, (on_player_cell_change_door_check, door_open_system))
-        .add_systems(Update, on_player_cell_change_win_check)
+        .add_systems(Update, (on_player_cell_change_door_check, door_open_system).run_if(in_state(GameState::InGame)))
+        .add_systems(Update, (on_player_cell_change_win_check, on_monster_reached_player).chain().run_if(in_state(GameState::InGame)))
         .add_plugins(PhysicsPlugin)
         .add_plugins(MonsterPlugin)
+        .register_type::<Position>()
         .run();
 }
 
@@ -181,6 +181,7 @@ fn on_player_cell_change_door_check(
 fn on_player_cell_change_win_check(
     mut commands: Commands<'_, '_>,
     mut event: EventReader<PlayerCellChangeEvent>,
+    mut next_state: ResMut<NextState<GameState>>,
     main_camera_query: Query<Entity, With<WorldModelCamera>>
 ) {
     let winning_cell = Position::new((consts::MAZE_X - 1) as f32, (consts::MAZE_Y - 1) as f32);
@@ -199,7 +200,31 @@ fn on_player_cell_change_win_check(
                     }),
                 TargetCamera(player_camera)
             ));
+            next_state.set(GameState::Won)
         }
+    }
+}
+
+fn on_monster_reached_player(
+    mut commands: Commands<'_, '_>,
+    mut event: EventReader<MonsterReachedPlayer>,
+    mut next_state: ResMut<NextState<GameState>>,
+    main_camera_query: Query<Entity, With<WorldModelCamera>>
+) {
+    for e in event.read() {
+        let player_camera = main_camera_query.single();
+        // player wins
+        commands.spawn((
+            TextBundle::from("You lose!").with_style(
+                Style {
+                    position_type: PositionType::Absolute,
+                    align_self: AlignSelf::Center,
+                    justify_self: JustifySelf::Center,
+                    ..default()
+                }),
+            TargetCamera(player_camera)
+        ));
+        next_state.set(GameState::Lost);
     }
 }
 

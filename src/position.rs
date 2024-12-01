@@ -1,7 +1,7 @@
 use std::ops::{Add, Mul, Sub};
 use bevy::prelude::*;
 
-#[derive(Default, Debug, Copy, Clone, PartialEq, Component)]
+#[derive(Default, Debug, Copy, Clone, PartialEq, Component, Reflect)]
 pub struct Position {
     pub x: f32,
     pub y: f32,

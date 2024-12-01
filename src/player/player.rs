@@ -84,9 +84,10 @@ impl Plugin for PlayerPlugin {
     fn build(&self, app: &mut App) {
         use bevy::input::{keyboard, mouse};
 
-        app.add_systems(Startup, setup);
-        app.add_systems(PreUpdate, (controller_input, controller_look, controller_move, controller_render).chain().after(mouse::mouse_button_input_system).after(keyboard::keyboard_input_system));
-        app.add_systems(Update, (check_cell_changed).after(velocity::apply_velocity).run_if(in_state(GameState::InGame)));
+        app.add_systems(Startup, setup)
+            .add_systems(PreUpdate, (controller_input, controller_look, controller_move, controller_render).chain().after(mouse::mouse_button_input_system).after(keyboard::keyboard_input_system))
+            .add_systems(Update, (check_cell_changed).after(velocity::apply_velocity).run_if(in_state(GameState::InGame)))
+            .add_event::<PlayerCellChangeEvent>();
     }
 }
 
