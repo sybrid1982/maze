@@ -1,7 +1,7 @@
 use std::ops::{Add, Mul, Sub};
 use bevy::prelude::*;
 
-#[derive(Default, Debug, Copy, Clone, PartialEq, Component)]
+#[derive(Default, Debug, Copy, Clone, PartialEq, Component, Reflect)]
 pub struct Position {
     pub x: f32,
     pub y: f32,
@@ -67,5 +67,9 @@ impl Position {
 
     pub fn get_from_transform(transform: &Transform, scale: f32) -> Self {
         Position { x: (transform.translation.x / scale).round(), y: (transform.translation.z / scale).round() }
+    }
+
+    pub fn get_distance_to_position(&self, position: Position) -> usize {
+        (self.x as usize).abs_diff(position.x as usize) + (self.y as usize).abs_diff(position.y as usize)
     }
 }

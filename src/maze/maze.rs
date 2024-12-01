@@ -209,7 +209,9 @@ impl Maze {
         position.x >= 0. && position.x < self.size_x as f32 && position.y >= 0. && position.y < self.size_y as f32
     }
 
-
+    pub fn get_room_number_for_position(&self, position: Position) -> usize {
+        self.maze_rooms.get_room_number_for_position(position)
+    }
 }
 
 fn random_position(max_x: i32, max_y: i32, rand: &mut ResMut<Random>) -> Position {

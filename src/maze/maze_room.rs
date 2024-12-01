@@ -41,6 +41,10 @@ impl MazeRoom {
     pub fn get_cells(&mut self) -> &mut Vec<MazeCell> {
         &mut self.cells
     }
+
+    pub fn get_room_has_position(&self, position: Position) -> bool {
+        self.cells.iter().find(|cell| cell.get_position() == position).is_some()
+    }
 }
 
 #[derive(Resource, Default)]
@@ -116,6 +120,11 @@ impl MazeRooms {
         &mut self.maze_rooms[room_index]
     }
 
+    pub fn get_room_by_position(&mut self, position: Position) -> Option<&MazeRoom> {
+        let maze_room = self.maze_rooms.iter().find(|maze_room| maze_room.get_room_has_position(position));
+        return maze_room;
+    }
+
     fn empty_cells_from_room(&mut self, room_index: usize) -> Vec<MazeCell> {
         let mut emptied_cells: Vec<MazeCell> = vec![];
         emptied_cells.append(&mut self.maze_rooms[room_index].cells);
@@ -179,6 +188,11 @@ impl MazeRooms {
         // render each cell
             cell.render_cell(commands, meshes, floor_material.clone(), room_assets.clone(), floors);
         })
+    }
+
+    pub fn get_room_number_for_position(&self, position: Position) -> usize {
+        let room_number: usize = self.maze_rooms.iter().position(|room| room.get_room_has_position(position)).expect("get_room_number_for_position: Position not in room");
+        room_number
     }
 }
 

@@ -6,6 +6,7 @@ use bevy::input::mouse::MouseMotion;
 use bevy::prelude::*;
 use bevy::render::view::RenderLayers;
 
+use crate::character::character::{CharacterBundle, Speed};
 use crate::game_states::GameState;
 use crate::physics::velocity;
 use crate::position::Position;
@@ -20,10 +21,7 @@ const PLAYER_START_POSITION: Position = Position { x: 0., y: 0. };
 pub struct PlayerPlugin;
 
 #[derive(Debug, Component)]
-struct WorldModelCamera;
-
-#[derive(Component, Deref, DerefMut)]
-struct Speed(f32);
+pub struct WorldModelCamera;
 
 #[derive(Component)]
 pub struct LogicalPlayer;
@@ -86,9 +84,10 @@ impl Plugin for PlayerPlugin {
     fn build(&self, app: &mut App) {
         use bevy::input::{keyboard, mouse};
 
-        app.add_systems(Startup, setup);
-        app.add_systems(PreUpdate, (controller_input, controller_look, controller_move, controller_render).chain().after(mouse::mouse_button_input_system).after(keyboard::keyboard_input_system));
-        app.add_systems(Update, (check_cell_changed).after(velocity::apply_velocity).run_if(in_state(GameState::InGame)));
+        app.add_systems(Startup, setup)
+            .add_systems(PreUpdate, (controller_input, controller_look, controller_move, controller_render).chain().after(mouse::mouse_button_input_system).after(keyboard::keyboard_input_system))
+            .add_systems(Update, (check_cell_changed).after(velocity::apply_velocity).run_if(in_state(GameState::InGame)))
+            .add_event::<PlayerCellChangeEvent>();
     }
 }
 
@@ -117,12 +116,14 @@ fn setup (
             ..default()
         },
         LogicalPlayer,
-        Speed(consts::PLAYER_SPEED),
+        CharacterBundle {
+            speed: Speed(consts::PLAYER_SPEED),
+            velocity: Velocity::new(0.0, 0.0),
+            position: Position{x: PLAYER_START_POSITION.x, y: PLAYER_START_POSITION.y}
+        },
         Name::new("Player"),
-        Velocity::new(0.0, 0.0),
         Controller::default(),
         ControllerInput::default(),
-        Position{x: PLAYER_START_POSITION.x, y: PLAYER_START_POSITION.y}
     );
 
     let light = (
