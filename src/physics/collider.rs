@@ -3,7 +3,7 @@ use bevy::{
     math::bounding::Aabb2d
 };
 
-use crate::maze::maze_cell_edge::WallPosition;
+use crate::position::Position;
 use crate::player::player::LogicalPlayer;
 use super::velocity::Velocity;
 use crate::GameRunSet;
@@ -19,7 +19,9 @@ impl Plugin for ColliderPlugin {
 }
 
 #[derive(Component)]
-pub struct Collider;
+pub struct Collider{
+    half_size: Vec2
+}
 
 #[derive(Event, Default)]
 pub struct CollisionEvent;
@@ -31,6 +33,11 @@ enum CollisionOrientation {
 }
 
 impl Collider {
+    pub fn create_from_transform(transform: &Transform) -> Self {
+        Self {
+            half_size: Vec2::new(transform.scale.x / 2., transform.scale.z / 2.)
+        }
+    }
     /**
      * Takes two colliders and says what side of the first collider is colliding with the second, if any
      */
@@ -72,12 +79,11 @@ impl Collider {
 }
 
 fn get_wall_size(wall_facing: &MazeDirection) -> Vec2 {
-    
     match wall_facing {
-        MazeDirection::EAST => Vec2::new(consts::WALL_THICKNESS, consts::MAZE_SCALE / 2.),
-        MazeDirection::WEST => Vec2::new(consts::WALL_THICKNESS, consts::MAZE_SCALE / 2.),
-        MazeDirection::NORTH => Vec2::new(consts::MAZE_SCALE / 2., consts::WALL_THICKNESS ),
-        MazeDirection::SOUTH => Vec2::new(consts::MAZE_SCALE / 2., consts::WALL_THICKNESS ),
+        MazeDirection::EAST => Vec2::new(consts::WALL_THICKNESS, consts::MAZE_SCALE as f32 / 2.),
+        MazeDirection::WEST => Vec2::new(consts::WALL_THICKNESS, consts::MAZE_SCALE as f32 / 2.),
+        MazeDirection::NORTH => Vec2::new(consts::MAZE_SCALE as f32 / 2., consts::WALL_THICKNESS ),
+        MazeDirection::SOUTH => Vec2::new(consts::MAZE_SCALE as f32 / 2., consts::WALL_THICKNESS ),
     }
 }
 
@@ -137,14 +143,16 @@ fn is_collision_on_south(moving_collider: Aabb2d, static_collider: Aabb2d, colli
 // Ergo, we should be able to to instead get the player's cell, and then check collision with the objects
 // for that cell
 pub(crate) fn check_for_collisions(
-    mut player_query: Query<(&mut Velocity, &Transform), With<LogicalPlayer>>,
-    collider_query: Query<(&GlobalTransform, &WallPosition), (With<Collider>, Without<LogicalPlayer>)>,
+    mut player_query: Query<(&mut Velocity, &Transform, &Position), With<LogicalPlayer>>,
+    collider_query: Query<(&GlobalTransform, &Position), (With<Collider>, Without<LogicalPlayer>)>,
 ) {
     let (mut player_velocity, player_transform) = player_query.single_mut();
 
     let player_collider = Collider::transform_to_aabb2d(player_transform);
 
     let mut number_of_collisions = 0;
+
+    let nearby_colliders = collider_query.iter().filter(|(_, position| { })
 
     for (collider_transform, wall_position) in collider_query.iter() {
         // need to get the dimensions of the wall and the dimensions of the player size

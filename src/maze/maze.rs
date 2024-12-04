@@ -8,7 +8,7 @@ use crate::position::Position;
 use crate::random::Random;
 use super::maze_assets::MazeAssets;
 use super::maze_cell::MazeCell;
-use super::maze_cell_edge::EdgeType;
+use super::maze_cell::EdgeType;
 use super::maze_direction::MazeDirection;
 use super::maze_room::MazeRooms;
 
@@ -67,7 +67,7 @@ impl Maze {
                     return;
                 }
         
-                let new_position = &position + current_cell.get_random_unused_direction_for_cell(rand).to_position_modifier();
+                let new_position = current_cell.get_random_unused_direction_for_cell(rand).get_position(&position);
                 if self.contains_position(&new_position) {
                     match self.get_cell(&new_position) {
                         Some(entered_cell) => {
@@ -177,7 +177,7 @@ impl Maze {
         let cell_leaving = self.get_cell_mut(prev_position);
         match cell_leaving {
             Some(cell) => {
-                cell.add_edge(&maze_direction, Some(EdgeType::Doorway), rand);
+                cell.add_edge(&maze_direction, Some(EdgeType::Doorway(false)), rand);
             },
             None => {
                 println!("No cell at position {}", format!("{:#?}", prev_position));
@@ -186,7 +186,7 @@ impl Maze {
         let cell_entering = self.get_cell_mut(curr_position);
         match cell_entering {
             Some(cell) => {
-                cell.add_edge(&maze_direction.get_opposite_direction(), Some(EdgeType::InverseDoorway), rand);
+                cell.add_edge(&maze_direction.get_opposite_direction(), Some(EdgeType::InverseDoorway(false)), rand);
             },
             None => {
                 println!("No cell at position {}", format!("{:#?}", prev_position));
@@ -206,7 +206,7 @@ impl Maze {
     }
     
     fn contains_position(&self, position: &Position) -> bool {
-        position.x >= 0. && position.x < self.size_x as f32 && position.y >= 0. && position.y < self.size_y as f32
+        position.x >= 0 && position.x < self.size_x as usize && position.y >= 0 && position.y < self.size_y as usize
     }
 
     pub fn get_room_number_for_position(&self, position: Position) -> usize {

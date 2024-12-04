@@ -3,7 +3,7 @@ use bevy::prelude::*;
 use crate::{consts, position::Position};
 
 #[repr(u32)]
-#[derive(Debug, Copy, Clone, PartialEq, Eq, Hash)]
+#[derive(Debug, Copy, Clone, PartialEq, Eq, Hash, Component)]
 pub enum MazeDirection {
     NORTH,
     EAST,
@@ -17,12 +17,12 @@ impl MazeDirection {
         unsafe { ::std::mem::transmute(index) }
     }
 
-    pub fn to_position_modifier(&self) -> Position {
+    pub fn get_position(&self, position: &Position) -> Position {
         match self {
-            MazeDirection::NORTH => Position::new(0., -1.),
-            MazeDirection::EAST => Position::new(1., 0.),
-            MazeDirection::SOUTH => Position::new(0., 1.),
-            MazeDirection::WEST => Position::new(-1., 0.)
+            MazeDirection::NORTH => Position::new(position.x, position.y - 1),
+            MazeDirection::EAST => Position::new(position.x + 1, position.y),
+            MazeDirection::SOUTH => Position::new(position.x, position.y + 1),
+            MazeDirection::WEST => Position::new(position.x - 1, position.y)
         }
     }
 
@@ -35,13 +35,23 @@ impl MazeDirection {
         }
     }
 
+    pub fn get_as_ivec2_modifier(&self) -> IVec2 {
+        match self {
+            MazeDirection::NORTH => IVec2::new(0, -1),
+            MazeDirection::EAST => IVec2::new(1, 0),
+            MazeDirection::SOUTH => IVec2::new(0, 1),
+            MazeDirection::WEST => IVec2::new(-1, 0)
+        }
+    }
+
     pub fn get_direction_position_from_positions(position1: &Position, position2: &Position) -> MazeDirection {
-        let sum = position2 - position1;
-        match sum {
-            Position { x: 0., y: -1.} => MazeDirection::NORTH,
-            Position { x: 1., y: 0.} => MazeDirection::EAST,
-            Position { x: 0., y: 1.} => MazeDirection::SOUTH,
-            Position { x: -1., y: 0.} => MazeDirection::WEST,
+        let x = position2.x as isize - position1.x as isize;
+        let y = position2.x as isize - position1.x as isize;
+        match (x, y) {
+            (0, -1) => MazeDirection::NORTH,
+            (1, 0) => MazeDirection::EAST,
+            (0, 1) => MazeDirection::SOUTH,
+            (-1, 0) => MazeDirection::WEST,
             _ => panic!("positions not adjacent")
         }
     }

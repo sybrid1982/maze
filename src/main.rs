@@ -1,7 +1,8 @@
-use bevy::{prelude::*, reflect::TypeRegistry, render::{camera::Viewport, mesh::skinning::{SkinnedMesh, SkinnedMeshInverseBindposes}, primitives::Aabb, view::RenderLayers}};
+use bevy::{prelude::*, render::{camera::Viewport, mesh::skinning::{SkinnedMesh, SkinnedMeshInverseBindposes}, primitives::Aabb, view::RenderLayers}};
 
 use bevy_inspector_egui::quick::WorldInspectorPlugin;
 use maze::{maze_assets::MazeAssets, maze_door::{door_open_system, MazeDoor}};
+use maze_plugin::MazePlugin;
 use monster::{monster::MonsterPlugin, monster_assets::MonsterAssets, monster_events::MonsterReachedPlayer};
 use position::Position;
 use rand::SeedableRng;
@@ -27,6 +28,7 @@ mod monster;
 mod character;
 mod grid;
 mod pathfinding_node;
+mod maze_plugin;
 
 #[derive(Component)]
 struct TopDownCamera;
@@ -49,9 +51,9 @@ fn main() {
         ))
         .insert_state(GameState::LoadingAssets)
         .add_systems(OnEnter(GameState::LoadingAssets), (MazeAssets::load_assets, MonsterAssets::load_assets, setup_rng).chain().in_set(GameLoadSet))
-        .add_systems(OnEnter(GameState::Initialize), generate_maze)
         .add_systems(OnEnter(GameState::InGame), render_game)
         .add_plugins(PlayerPlugin)
+        .add_plugins(MazePlugin)
         .add_systems(Update, (move_minimap_position, recalculate_skinned_aabb).run_if(in_state(GameState::InGame)))
         .add_systems(Update, (on_player_cell_change_door_check, door_open_system).run_if(in_state(GameState::InGame)))
         .add_systems(Update, (on_player_cell_change_win_check, on_monster_reached_player).chain().run_if(in_state(GameState::InGame)))
@@ -82,19 +84,21 @@ fn render_game(
     add_top_view_camera(commands);
 }
 
-fn generate_maze(
-    mut commands: Commands, 
-    mut rng: ResMut<Random>, 
-    maze_assets: Res<MazeAssets>, 
-    materials: ResMut<'_, Assets<StandardMaterial>>,
-    mut next_state: ResMut<NextState<GameState>>
-) {
-    // create a maze
-    let mut maze = Maze::new(consts::MAZE_X, consts::MAZE_Y);
-    maze.generate(&mut rng, maze_assets, materials);
-    commands.insert_resource(maze);
-    next_state.set(GameState::InGame)
-}
+// fn generate_maze(
+//     mut commands: Commands, 
+//     mut rng: ResMut<Random>, 
+//     maze_assets: Res<MazeAssets>, 
+//     materials: ResMut<'_, Assets<StandardMaterial>>,
+//     mut next_state: ResMut<NextState<GameState>>
+// ) {
+//     // create a maze
+//     let mut maze = Maze::new(consts::MAZE_X, consts::MAZE_Y);
+//     let mut data_maze = maze_data::maze::Maze::new(consts::MAZE_X as usize, consts::MAZE_Y as usize);
+//     maze.generate(&mut rng, maze_assets, materials);
+//     data_maze.generate(&mut rng);
+//     commands.insert_resource(maze);
+//     next_state.set(GameState::InGame)
+// }
 
 fn add_lights(commands: &mut Commands<'_, '_>) {
     // ambient light
@@ -103,7 +107,7 @@ fn add_lights(commands: &mut Commands<'_, '_>) {
         brightness: consts::GLOBAL_LIGHT_INTENSITY,
     });
 
-    let light_position: Vec2 = Vec2::splat(consts::MAZE_X as f32 * consts::MAZE_SCALE);
+    let light_position: Vec2 = Vec2::splat(consts::MAZE_X as f32 * consts::MAZE_SCALE as f32);
 
     // directional light
     commands.spawn(DirectionalLightBundle {
@@ -171,7 +175,7 @@ fn on_player_cell_change_door_check(
             let door_position = Position::get_from_transform(&door_transform.compute_transform(), consts::MAZE_SCALE);
             if player_position == door_position {
                 maze_door.open_door(true);
-            } else if player_position == &door_position + maze_door.get_maze_direction().to_position_modifier() {
+            } else if player_position == maze_door.get_maze_direction().get_position(&door_position) {
                 maze_door.open_door(false);
             }
         }
@@ -184,7 +188,7 @@ fn on_player_cell_change_win_check(
     mut next_state: ResMut<NextState<GameState>>,
     main_camera_query: Query<Entity, With<WorldModelCamera>>
 ) {
-    let winning_cell = Position::new((consts::MAZE_X - 1) as f32, (consts::MAZE_Y - 1) as f32);
+    let winning_cell = Position::new((consts::MAZE_X - 1) as usize, (consts::MAZE_Y - 1) as usize);
     for e in event.read() {
         let player_position = e.0;
         if player_position == winning_cell {

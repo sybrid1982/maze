@@ -16,7 +16,7 @@ use crate::physics::velocity::Velocity;
 use super::player_events::PlayerCellChangeEvent;
 
 const ANGLE_EPSILON: f32 = 0.001953125;
-const PLAYER_START_POSITION: Position = Position { x: 0., y: 0. };
+const PLAYER_START_POSITION: Position = Position { x: 0, y: 0 };
 
 pub struct PlayerPlugin;
 
@@ -112,7 +112,7 @@ fn setup (
         PbrBundle {
             mesh: meshes.add(Cuboid::new(consts::PLAYER_LENGTH, consts::PLAYER_HEIGHT, consts::PLAYER_WIDTH)),
             material: materials.add(Color::srgb(0.7,0.1,0.2)),
-            transform: Transform::from_xyz(PLAYER_START_POSITION.x, consts::MAZE_SCALE / 2., PLAYER_START_POSITION.y),
+            transform: Transform::from_xyz(PLAYER_START_POSITION.x as f32, consts::MAZE_SCALE as f32 / 2., PLAYER_START_POSITION.y as f32),
             ..default()
         },
         LogicalPlayer,

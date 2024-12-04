@@ -33,7 +33,7 @@ impl Plugin for MonsterPlugin {
 
 // lets spawn the monster in the center for now
 fn spawn_demon(mut commands: Commands, assets: Res<MonsterAssets>) {
-    let demon_position = Position::new((consts::MAZE_X / 2) as f32, (consts::MAZE_Y / 2) as f32);
+    let demon_position = Position::new((consts::MAZE_X / 2) as usize, (consts::MAZE_Y / 2) as usize);
     commands.spawn((
         MonsterBundle {
             character_bundle: CharacterBundle {

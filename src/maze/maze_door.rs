@@ -1,5 +1,3 @@
-use std::f32::consts::FRAC_PI_2;
-
 use bevy::prelude::*;
 
 use super::maze_direction::MazeDirection;

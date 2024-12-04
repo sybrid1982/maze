@@ -4,9 +4,9 @@ use std::f32::consts::*;
 use bevy::{prelude::*, render::view::RenderLayers};
 use rand::Rng;
 
-use crate::{consts, player::{player::LogicalPlayer, player_events::PlayerCellChangeEvent}, position::{MazePosition, Position}, random::Random};
+use crate::{consts, position::{MazePosition, Position}, random::Random, physics::collider::Collider};
 
-use super::{maze_cell_edge::{EdgeType, MazeCellEdge}, maze_direction::MazeDirection, maze_door::MazeDoor, maze_room::RoomAssets};
+use super::{maze_direction::MazeDirection, maze_door::MazeDoor, maze_room::RoomAssets, paintings::Painting};
 
 #[derive(Component, Clone)]
 pub struct MazeCell {
@@ -19,7 +19,7 @@ pub struct MazeCell {
 }
 
 impl MazeCell {
-    pub fn new(x: f32, y: f32, room_index: usize) -> Self {
+    pub fn new(x: usize, y: usize, room_index: usize) -> Self {
         MazeCell {
             position: Position::new( x, y ),
             render: false,
@@ -45,24 +45,6 @@ impl MazeCell {
     pub fn set_room_index(&mut self, room_index: usize) {
         self.room_index = room_index;
     }
-
-    // pub fn hide_cell(&self, &mut commands: &mut Commands) {
-    //     commands.entity(self.entity.unwrap()).
-    // }
-
-    // pub fn get_doors(&mut self) -> Vec<MazeDoor> {
-    //     let mut doors = vec![];
-    //     for (key, value) in self.edges {
-    //         match value {
-    //             Some(edge) => {
-    //                 if edge.is_door() {
-    //                     doors.push(edge)
-    //                 }
-    //             }
-    //             None => todo!(),
-    //         }
-    //     }
-    // }
 
     pub fn add_edge(&mut self, maze_direction: &MazeDirection, edge_type: Option<EdgeType>, rand: &mut ResMut<Random>) {
         if self.has_edge(maze_direction) {
@@ -121,7 +103,7 @@ impl MazeCell {
     fn render_floor(&mut self, commands: &mut Commands<'_, '_>, meshes: &mut ResMut<'_, Assets<Mesh>>, floor_material: Handle<StandardMaterial>, translation: Vec3, floors: Entity) {
         let floor = commands.spawn( (
             PbrBundle {
-                mesh: meshes.add(Rectangle::new(consts::MAZE_SCALE, consts::MAZE_SCALE)),
+                mesh: meshes.add(Rectangle::new(consts::MAZE_SCALE as f32, consts::MAZE_SCALE as f32)),
                 material: floor_material,
                 transform: Transform { translation, rotation: Quat::from_rotation_x(-FRAC_PI_2), ..default() },
                 ..default()
@@ -135,7 +117,7 @@ impl MazeCell {
 
     fn render_ceiling(&mut self, commands: &mut Commands, room_assets: &RoomAssets) {
         // TODO: Make this only render for the FPS camera and not the top down camera
-        let half_cell = consts::MAZE_SCALE / 2.;
+        let half_cell = consts::MAZE_SCALE as f32 / 2.;
         let transform = Transform::from_xyz(-half_cell, half_cell, 6.0)
             .with_rotation(Quat::from_euler(EulerRot::XYZ, FRAC_PI_2, 0.0, 0.0 ))
             .with_scale(Vec3::splat(2.0));
@@ -160,7 +142,7 @@ impl MazeCell {
         for (_maze_direction, edge) in &mut self.edges {
             match edge {
                 Some(edge) => {
-                    if edge.get_edge_type() == EdgeType::Doorway || edge.get_edge_type() == EdgeType::Wall {
+                    if edge.get_edge_type() == EdgeType::Doorway(false) || edge.get_edge_type() == EdgeType::Wall {
                         let new_edge = edge.create_edge_entity(commands, room_assets);
                         commands
                             .entity(self.entity.expect("somehow adding edge entity to non-existant floor"))
@@ -185,3 +167,144 @@ impl MazeCell {
     }
 }
 
+#[derive(Default, Copy, Clone, PartialEq)]
+pub enum EdgeType {
+    #[default]
+    Wall,
+    Doorway(bool),
+    InverseDoorway(bool)
+}
+
+#[derive(Clone)]
+pub struct MazeCellEdge {
+    maze_direction: MazeDirection,
+    edge_type: EdgeType,
+    painting: Option<Painting>,
+    wall_furniture: Vec<String>,
+    door: Option<Entity>
+}
+
+#[derive(Component, Debug, Deref, DerefMut)]
+pub struct WallPosition(pub MazeDirection);
+
+impl MazeCellEdge {
+    pub fn new(maze_direction: &MazeDirection, edge_type: EdgeType) -> MazeCellEdge {
+        MazeCellEdge { maze_direction: *maze_direction, edge_type, painting: None, wall_furniture: vec![], door: None }
+    }
+
+    pub fn get_edge_type(&self) -> EdgeType {
+        self.edge_type
+    }
+
+    pub fn get_maze_direction(&self) -> MazeDirection {
+        self.maze_direction
+    }
+
+    pub fn generate_furniture(&mut self, rand: &mut ResMut<Random>) {
+        if self.get_edge_type() == EdgeType::Wall {
+            let light_chance = rand.gen_range(0.0..1.);
+            if light_chance < consts::WALL_LIGHT_PROBABILITY {
+                // Add a wall light
+                self.wall_furniture.push(String::from("wall_light"));
+            }    
+        }
+    }
+
+    // Ideally we would have some way for a cell to say whether it is possible to move from one cell to another.
+    // ...or maybe this could be about room links?
+    pub fn is_passable(&self) -> bool {
+        if (self.edge_type == EdgeType::Doorway(true) || self.edge_type == EdgeType::InverseDoorway(true)) // && self.is_open {
+        {
+            return true;
+        }
+        false
+    }
+
+    pub fn create_edge_entity(
+        &mut self,
+        commands: &mut Commands<'_, '_>,
+        room_assets: &RoomAssets,
+    ) -> Option<Entity> {
+        match self.get_edge_type() {
+            EdgeType::Wall => {
+                self.create_wall(commands, room_assets)
+            },
+            EdgeType::Doorway(_) => {
+                self.create_door(commands, room_assets)
+            },
+            _ => None
+        }
+    }
+
+fn create_door(&mut self, commands: &mut Commands<'_, '_>, room_assets: &RoomAssets) -> Option<Entity> {
+        let translation: Vec3 = self.get_maze_direction().get_door_position_for_cell();
+        let rotation = self.get_maze_direction().get_direction_quat();
+        let transform = Transform::from_xyz(translation.x, translation.y, translation.z)
+            .with_rotation(rotation)
+            .with_scale(Vec3::new(2.0, 2.0, 2.0));
+        let doorway = commands.spawn((
+            SceneBundle {
+                scene: room_assets.doorway.clone(),
+                transform,
+                ..default()
+            },
+            Collider,
+            Name::new(format!("Door {:#?}", self.get_maze_direction()))
+        )).id();
+        let maze_door = MazeDoor::new(commands, room_assets.door.clone(), self.get_maze_direction());
+        let door = maze_door.get_door_child();
+        commands.entity(door).insert(maze_door);
+        commands.entity(doorway).push_children(&[door]);
+        self.door = Some(door);
+        return Some(doorway);
+    }
+
+fn create_wall(&mut self, commands: &mut Commands<'_, '_>, room_assets: &RoomAssets) -> Option<Entity> {
+        let translation: Vec3 = self.get_maze_direction().get_wall_position_for_cell();
+        let rotation = self.get_maze_direction().get_direction_quat();
+        let transform = Transform::from_xyz(translation.x, translation.y, translation.z)
+            .with_rotation(rotation)
+            .with_scale(Vec3::splat(2.));
+    
+        let wall = commands.spawn( (
+            SceneBundle {
+                scene: room_assets.wall.clone(),
+                transform,
+                ..default()
+            },
+            Collider,
+            WallPosition(self.get_maze_direction()),
+            Name::new(format!("Wall {:#?}", self.get_maze_direction()))
+        )).id();
+    
+        if self.wall_furniture.contains(&String::from("wall_light"))
+        {
+            if let Some(wall_light_handle) = room_assets.other_furniture.get("wall_light") {
+                let light_position = Vec3::new(1.3, 1.8, 0.1);
+                let light_model = commands.spawn((
+                    SceneBundle {
+                        scene: wall_light_handle.clone(),
+                        transform: Transform::from_xyz(light_position.x, light_position.y, light_position.z)
+                            .with_scale(Vec3::splat(0.5)),
+                        ..default()
+                    },
+                )).with_children(|parent: &mut ChildBuilder<'_>| {
+                    parent.spawn(PointLightBundle {
+                        transform: Transform::from_xyz(0.0, 0.0, 0.4),
+                            point_light: PointLight {
+                            color: Color::srgb(0.0, 0.1, 1.0),
+                            intensity: 20000.0,
+                            ..default()
+                        },
+                        ..default()
+                    });
+                }).id();
+    
+                commands.entity(wall).push_children(&[light_model]);
+            }
+    
+        }
+    
+        Some(wall)
+    }
+}
